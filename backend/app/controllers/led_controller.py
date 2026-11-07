@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, col, select
 
 from app.controllers.deps import CurrentUser
+from app.core import led_overlay
 from app.core.config import settings
 from app.core.database import SessionDep, engine
 from app.core.led_skins import DEFAULT_SKIN, SKINS, Ctx, render, to_hex
@@ -136,7 +137,8 @@ class LedDisplay:
             self._ctx.now = datetime.now()
 
             try:
-                frame = render(skin, now - start, self._ctx, state)
+                # A temporary overlay (e.g. negotiation progress) wins over the skin.
+                frame = led_overlay.current() or render(skin, now - start, self._ctx, state)
             except Exception:
                 frame = self.frame
             self.frame = frame

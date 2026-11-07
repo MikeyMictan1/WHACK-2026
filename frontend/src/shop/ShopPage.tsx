@@ -101,7 +101,7 @@ function ChildShop() {
                 <li key={o.id} className="flex justify-between gap-4 border-b border-ink/15 py-4">
                   <span className="font-medium">{o.title}</span>
                   <span className="meta">
-                    {formatMoney(o.price)} · {new Date(o.created_at).toLocaleDateString()}
+                    {formatMoney(o.price)} · {new Date(o.created_at).toLocaleDateString('en-GB')}
                   </span>
                 </li>
               ))}

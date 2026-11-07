@@ -5,7 +5,7 @@ import { Button, ButtonLink } from '../components/ui/Button.tsx'
 import { FormError } from '../components/ui/FormError.tsx'
 import { Skeleton } from '../components/ui/Skeleton.tsx'
 import { showToast } from '../components/ui/toast.ts'
-import { formatMoney, parseMoney } from '../lib/money.ts'
+import { CURRENCY_LABEL, formatMoney, parseMoney } from '../lib/money.ts'
 import { shopApi } from '../shop/shopApi.ts'
 import { ChildForm } from './ChildForm.tsx'
 import { childrenApi } from './childrenApi.ts'
@@ -36,7 +36,7 @@ export function ParentDashboard({ parent }: { parent: User }) {
   }, [])
 
   async function onBonus(child: User) {
-    const input = window.prompt(`Give ${nameOf(child)} a bonus. How much (£)?`, '5.00')
+    const input = window.prompt(`Give ${nameOf(child)} a bonus. How much (${CURRENCY_LABEL})?`, '5.00')
     if (input === null) return
     const amount = parseMoney(input)
     if (amount === null) return showToast('Enter an amount like 5.00', 'error')

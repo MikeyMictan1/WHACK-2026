@@ -5,7 +5,7 @@ import { FormError } from '../components/ui/FormError.tsx'
 import { Skeleton } from '../components/ui/Skeleton.tsx'
 import { TextField } from '../components/ui/TextField.tsx'
 import { showToast } from '../components/ui/toast.ts'
-import { formatMoney, parseMoney } from '../lib/money.ts'
+import { CURRENCY_LABEL, formatMoney, parseMoney } from '../lib/money.ts'
 import {
   CHORE_KINDS,
   REWARD_KINDS,
@@ -196,7 +196,7 @@ function AddRewardForm({ onAdded }: { onAdded: () => Promise<void> }) {
       <p className="meta mt-2 mb-6">For example a PS5 milestone, a cinema trip, or a new theme.</p>
       <div className="grid gap-6 md:grid-cols-[2fr_1fr_1fr]">
         <TextField label="Name" name="title" maxLength={60} required />
-        <TextField label="Price (£)" name="price" inputMode="decimal" placeholder="4.50" required />
+        <TextField label={`Price (${CURRENCY_LABEL})`} name="price" inputMode="decimal" placeholder="4.50" required />
         <div className="flex flex-col gap-2">
           <label htmlFor="reward-kind" className="text-sm font-medium">
             Type
@@ -254,7 +254,7 @@ function AddChoreForm({ onAdded }: { onAdded: () => Promise<void> }) {
       <h3 className="text-d4 font-medium">Add a way to earn</h3>
       <div className="mt-6 grid gap-6 md:grid-cols-[2fr_1fr_1fr]">
         <TextField label="Name" name="title" maxLength={60} required />
-        <TextField label="Pays (£)" name="amount" inputMode="decimal" placeholder="2.00" required />
+        <TextField label={`Pays (${CURRENCY_LABEL})`} name="amount" inputMode="decimal" placeholder="2.00" required />
         <div className="flex flex-col gap-2">
           <label htmlFor="chore-kind" className="text-sm font-medium">
             Type

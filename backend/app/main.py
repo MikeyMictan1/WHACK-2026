@@ -11,7 +11,9 @@ from app.controllers import (
     ai_controller,
     health_controller,
     led_controller,
+    negotiation_controller,
     nfc_controller,
+    plans_controller,
     shop_controller,
     vault_controller,
 )
@@ -47,6 +49,8 @@ for controller in (
     chores_controller,
     ai_controller,
     led_controller,
+    plans_controller,
+    negotiation_controller,
     nfc_controller,
     shop_controller,
     vault_controller,

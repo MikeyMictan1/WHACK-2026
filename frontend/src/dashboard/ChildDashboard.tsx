@@ -47,7 +47,7 @@ export function ChildDashboard({ child }: { child: User }) {
               <div>
                 <p className="font-medium">{e.description}</p>
                 <p className="meta mt-1">
-                  {e.kind} · {new Date(e.created_at).toLocaleDateString()}
+                  {e.kind} · {new Date(e.created_at).toLocaleDateString('en-GB')}
                 </p>
               </div>
               <span className={`tabular-nums ${e.amount < 0 ? '' : 'font-medium'}`}>
@@ -58,7 +58,8 @@ export function ChildDashboard({ child }: { child: User }) {
           ))}
         </ul>
 
-        <div className="mt-12">
+        <div className="mt-12 flex flex-wrap gap-3">
+          <ButtonLink to="/review">Monthly review</ButtonLink>
           <ButtonLink to="/profile" variant="light" className="border border-ink">
             Account and log out
           </ButtonLink>

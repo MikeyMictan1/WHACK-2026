@@ -11,6 +11,9 @@ import { ShopPage } from '../shop/ShopPage.tsx'
 import { EarnPage } from '../earn/EarnPage.tsx'
 import { ManageShopPage } from '../manage/ManageShopPage.tsx'
 import { LedHomePage } from '../led/LedHomePage.tsx'
+import { MonthlyReviewPage } from '../monthly/MonthlyReviewPage.tsx'
+import { NegotiationPage } from '../negotiation/NegotiationPage.tsx'
+import { PlansPage } from '../plans/PlansPage.tsx'
 import { NotFoundPage } from '../not-found/NotFoundPage.tsx'
 import { PrivacyPage } from '../legal/PrivacyPage.tsx'
 import { TermsPage } from '../legal/TermsPage.tsx'
@@ -63,6 +66,30 @@ export function App() {
           element={
             <RequireAuth>
               <ManageShopPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="review"
+          element={
+            <RequireAuth>
+              <MonthlyReviewPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="plans"
+          element={
+            <RequireAuth>
+              <PlansPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="plans/:cardId/negotiate"
+          element={
+            <RequireAuth>
+              <NegotiationPage />
             </RequireAuth>
           }
         />
