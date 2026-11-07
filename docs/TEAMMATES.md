@@ -53,7 +53,8 @@ Backend and frontend hot-reload. Restart only after editing `backend/.env` or in
 The app works without it.
 
 - **NFC reader (ACR122U):** plug it in. Needs the `pyscard` package and the reader driver; if missing, NFC just stays disabled.
-- **LED matrix:** one-time copy of the board script (replace COM3 with your port):
+- **LED matrix:** copy the board script (replace COM3 with your port). Re-copy whenever
+  `hardware/unicorn/whack_grid.py` changes (it gained a whole-frame command for LED Home):
   `uvx mpremote connect COM3 cp hardware/unicorn/whack_grid.py :whack_grid.py`
 
 ## Troubleshooting

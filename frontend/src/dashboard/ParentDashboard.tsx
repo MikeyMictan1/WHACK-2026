@@ -5,8 +5,11 @@ import { Button, ButtonLink } from '../components/ui/Button.tsx'
 import { FormError } from '../components/ui/FormError.tsx'
 import { Skeleton } from '../components/ui/Skeleton.tsx'
 import { showToast } from '../components/ui/toast.ts'
+import { formatMoney, parseMoney } from '../lib/money.ts'
+import { shopApi } from '../shop/shopApi.ts'
 import { ChildForm } from './ChildForm.tsx'
 import { childrenApi } from './childrenApi.ts'
+import { ParentApprovals } from './ParentApprovals.tsx'
 
 /** The parent's home: their kids' accounts, and adding / editing / removing them. */
 export function ParentDashboard({ parent }: { parent: User }) {
@@ -14,6 +17,11 @@ export function ParentDashboard({ parent }: { parent: User }) {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [adding, setAdding] = useState(false)
+  const [balances, setBalances] = useState<Record<string, number>>({})
+
+  function loadBalances() {
+    shopApi.balances().then(setBalances).catch(() => {})
+  }
 
   useEffect(() => {
     childrenApi
@@ -24,7 +32,22 @@ export function ParentDashboard({ parent }: { parent: User }) {
         if (list.length === 0) setAdding(true)
       })
       .catch((err: Error) => setLoadError(err.message))
+    loadBalances()
   }, [])
+
+  async function onBonus(child: User) {
+    const input = window.prompt(`Give ${nameOf(child)} a bonus. How much (£)?`, '5.00')
+    if (input === null) return
+    const amount = parseMoney(input)
+    if (amount === null) return showToast('Enter an amount like 5.00', 'error')
+    try {
+      await shopApi.bonus(child.id, amount, 'Bonus from parent')
+      loadBalances()
+      showToast(`Gave ${nameOf(child)} ${formatMoney(amount)}`)
+    } catch (err) {
+      showToast((err as Error).message, 'error')
+    }
+  }
 
   async function onRemove(child: User) {
     if (!window.confirm(`Remove ${nameOf(child)}'s account? This deletes their account and data.`)) return
@@ -42,10 +65,12 @@ export function ParentDashboard({ parent }: { parent: User }) {
       <PageHeader
         marker="Parent dashboard"
         title={`Hi, ${nameOf(parent)}.`}
-        description="Create and manage your kids' accounts. Card, allowance and reward settings come next."
+        description="Approve what your kids buy and earn, manage their accounts, and set up the shop."
       />
 
       <section className="container-x py-10 md:py-14">
+        {children && children.length > 0 && <ParentApprovals onChange={loadBalances} />}
+
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink pb-4">
           <h2 className="text-d3 font-light tracking-[-0.02em]">Your kids</h2>
           {children && !adding && <Button onClick={() => setAdding(true)}>Add child</Button>}
@@ -76,11 +101,14 @@ export function ParentDashboard({ parent }: { parent: User }) {
                   <div>
                     <p className="text-d4 font-medium">{nameOf(child)}</p>
                     <p className="meta mt-1">
-                      @{child.username} · age {child.age}
+                      @{child.username} · age {child.age} · balance {formatMoney(balances[child.id] ?? 0)}
                     </p>
                   </div>
                   {editingId !== child.id && (
-                    <div className="flex gap-3">
+                    <div className="flex flex-wrap gap-3">
+                      <Button size="sm" variant="light" className="border border-ink" onClick={() => onBonus(child)}>
+                        Give bonus
+                      </Button>
                       <Button size="sm" variant="light" className="border border-ink" onClick={() => setEditingId(child.id)}>
                         Edit
                       </Button>
@@ -131,6 +159,7 @@ export function ParentDashboard({ parent }: { parent: User }) {
         )}
 
         <div className="mt-14 flex flex-wrap gap-3 border-t border-line pt-8">
+          <ButtonLink to="/manage">Shop and chores</ButtonLink>
           <ButtonLink to="/profile" variant="light" className="border border-ink">
             Account settings
           </ButtonLink>

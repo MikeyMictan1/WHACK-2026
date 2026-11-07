@@ -8,8 +8,8 @@ import { Hero } from './Hero.tsx'
 import { ProductMock } from './ProductMock.tsx'
 
 const FEATURE_COPY: Record<string, string> = {
-  '/feature-1': 'Say what the first feature does, in a sentence or two.',
-  '/feature-2': 'Say what the second feature does, in a sentence or two.',
+  '/shop': 'Spend play money on rewards your parent sets, from a cinema trip to saving for a PS5.',
+  '/led': 'Your LED screen at home: the time, the weather, your savings jar, or skins you bought.',
   '/ai': 'Ask anything and get an answer from Claude.',
 }
 
@@ -85,7 +85,7 @@ export function FrontPage() {
             <br />
             turn.
           </h2>
-          <ButtonLink to={user ? '/feature-1' : '/register'} variant="onAccent" className="md:mb-4">
+          <ButtonLink to={user ? '/dashboard' : '/register'} variant="onAccent" className="md:mb-4">
             {user ? 'Explore features' : 'Create account'}
           </ButtonLink>
         </div>

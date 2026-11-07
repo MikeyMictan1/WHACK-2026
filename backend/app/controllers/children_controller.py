@@ -15,6 +15,9 @@ from app.models.user import (
     get_user_by_username,
     list_children,
 )
+from sqlmodel import delete
+
+from app.models.shop import CardLink, ChoreClaim, LedgerEntry, PurchaseRequest
 from app.models.vault import Vault
 
 router = APIRouter(prefix="/children", tags=["children"])
@@ -69,5 +72,7 @@ def delete_child(child_id: int, parent: CurrentParent, session: SessionDep) -> N
     child = _own_child(session, parent, child_id)
     if vault := session.get(Vault, child.id):
         session.delete(vault)
+    for table in (LedgerEntry, PurchaseRequest, ChoreClaim, CardLink):
+        session.exec(delete(table).where(table.child_id == child.id))  # type: ignore[call-overload]
     session.delete(child)
     session.commit()

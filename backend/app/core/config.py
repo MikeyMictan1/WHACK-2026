@@ -24,5 +24,12 @@ class Settings(BaseSettings):
     # Changing it makes every existing card unreadable.
     nfc_secret: str = ""
 
+    # Show/allow the "Simulate tap" button for paying without an NFC reader (demo backup).
+    allow_simulated_tap: bool = True
+
+    # Where the LED "Weather" skin looks (Open-Meteo, no key needed). Default: London.
+    weather_lat: float = 51.5074
+    weather_lon: float = -0.1278
+
 
 settings = Settings()

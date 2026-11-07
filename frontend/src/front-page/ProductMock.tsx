@@ -5,7 +5,7 @@ import { useHealth } from './useHealth.ts'
  * The numbers are sample data; only the status line in the title bar is live.
  */
 
-const NAV = ['Overview', 'Feature 1', 'Feature 2', 'AI Feature']
+const NAV = ['Overview', 'Shop', 'LED Home', 'AI Feature']
 
 const BARS = [34, 46, 40, 52, 47, 58, 54, 44, 57, 65, 61, 70, 63, 57, 68, 73, 79, 100, 76, 69, 64, 71, 60, 67]
 const PEAK = 17
@@ -18,7 +18,7 @@ const STATS = [
 
 const LOG = [
   { method: 'POST', path: '/api/auth/register', code: 201, ms: 14 },
-  { method: 'GET', path: '/api/feature-1', code: 200, ms: 6 },
+  { method: 'GET', path: '/api/shop/rewards', code: 200, ms: 6 },
   { method: 'GET', path: '/api/auth/me', code: 200, ms: 4 },
   { method: 'POST', path: '/api/auth/login', code: 200, ms: 11 },
 ]
