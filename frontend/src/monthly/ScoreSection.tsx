@@ -1,8 +1,6 @@
 import { TextLink } from '../components/ui/Button.tsx'
+import { signed } from '../lib/format.ts'
 import { formatDate, type CreditSummary, type ScoreFactor, type ScoreInfo, type ScorePoint } from '../credit/creditApi.ts'
-
-/** +14 / −34 / 0 */
-const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '0')
 
 /**
  * The credit score on the Monthly review: the number, what it is made of, why it moved last month and how it
@@ -72,7 +70,7 @@ export function ScoreSection({ summary }: { summary: CreditSummary }) {
   )
 }
 
-function Bar({ value, max, label }: { value: number; max: number; label: string }) {
+export function Bar({ value, max, label }: { value: number; max: number; label: string }) {
   const percent = Math.max(0, Math.min(100, Math.round((value / max) * 100)))
   return (
     <div
@@ -88,7 +86,7 @@ function Bar({ value, max, label }: { value: number; max: number; label: string 
   )
 }
 
-function FactorRow({ factor }: { factor: ScoreFactor }) {
+export function FactorRow({ factor }: { factor: ScoreFactor }) {
   return (
     <li>
       <div className="flex items-baseline justify-between gap-4">
@@ -105,7 +103,7 @@ function FactorRow({ factor }: { factor: ScoreFactor }) {
   )
 }
 
-function Reasons({ score }: { score: ScoreInfo }) {
+export function Reasons({ score }: { score: ScoreInfo }) {
   if (score.reasons.length === 0) {
     return (
       <p className="mt-4 max-w-prose text-muted">
@@ -129,7 +127,7 @@ function Reasons({ score }: { score: ScoreInfo }) {
 }
 
 /** A plain line chart of the score by month, with the band edges (Fair, Good, Excellent) marked. */
-function ScoreChart({ points, min, max }: { points: ScorePoint[]; min: number; max: number }) {
+export function ScoreChart({ points, min, max }: { points: ScorePoint[]; min: number; max: number }) {
   if (points.length < 2) {
     return <p className="max-w-prose text-muted">Your history builds up here after your first statement.</p>
   }

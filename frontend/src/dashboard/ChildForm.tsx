@@ -86,10 +86,15 @@ export function ChildForm(props: Props) {
     const display_name = String(form.get('display_name') ?? '').trim()
     const weekly_allowance = fromWc(String(form.get('weekly_allowance') ?? ''))
     const password = String(form.get('password') ?? '')
+    const limitText = String(form.get('starting_credit_limit') ?? '')
+    const starting_credit_limit = fromWc(limitText)
 
     if (!display_name) return setError('Give your child a name')
     if (weekly_allowance === null) {
       return setError('Enter a valid weekly allowance')
+    }
+    if (limitText.trim() !== '' && (starting_credit_limit === null || starting_credit_limit < 100 || starting_credit_limit > 10_000)) {
+      return setError('Starting credit limit must be between 1 and 100 WC, or left blank')
     }
     const app_experience =
       experienceChoice === CUSTOM
@@ -126,6 +131,7 @@ export function ChildForm(props: Props) {
           weekly_allowance,
           app_experience,
           card_type,
+          starting_credit_limit,
           weekly_items,
           milestones: milestone_list,
         })
@@ -141,6 +147,7 @@ export function ChildForm(props: Props) {
           weekly_allowance,
           app_experience,
           card_type,
+          starting_credit_limit,
           weekly_items,
           milestones: milestone_list,
           ...(password ? { password } : {}),
@@ -190,6 +197,17 @@ export function ChildForm(props: Props) {
           defaultValue={child?.weekly_allowance != null ? toWc(child.weekly_allowance) : ''}
           hint="Amount in WC"
           required
+        />
+        <TextField
+          label="Starting credit limit"
+          name="starting_credit_limit"
+          type="number"
+          inputMode="decimal"
+          min={1}
+          max={100}
+          step="0.01"
+          defaultValue={child?.starting_credit_limit != null ? toWc(child.starting_credit_limit) : ''}
+          hint="1 to 100 WC on their first card. Blank uses the card's own limit"
         />
         <ItemListField
           label="Weekly items"

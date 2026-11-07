@@ -9,6 +9,7 @@ from app.models.led import LedEquip, RewardSkin
 from app.models.milestone import Milestone
 from app.models.negotiation import NegotiationMessage, NegotiationSession
 from app.models.push import PushKeys, PushSubscription
+from app.models.recap import Recap
 from app.models.shop import (
     CardLink,
     Chore,
@@ -47,6 +48,7 @@ __all__ = [
     "PushKeys",
     "PushSubscription",
     "Reward",
+    "Recap",
     "ScoreEvent",
     "RewardSkin",
     "SiteClock",

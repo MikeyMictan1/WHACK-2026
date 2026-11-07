@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from app.controllers import (
     admin_controller,
     auth_controller,
+    breakdown_controller,
     children_controller,
     chores_controller,
     credit_controller,
@@ -54,6 +55,7 @@ for controller in (
     auth_controller,
     admin_controller,
     children_controller,
+    breakdown_controller,
     chores_controller,
     credit_controller,
     ai_controller,

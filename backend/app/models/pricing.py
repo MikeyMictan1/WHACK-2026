@@ -124,12 +124,13 @@ def switch_locked_reason(profile: CreditProfile) -> str | None:
 
 
 def blocked_reason(
-    profile: CreditProfile, card: Card, allowed: set[str] | None, *, show_score: bool = True
+    profile: CreditProfile, card: Card, allowed: set[str] | None, *, show_score: bool = True, limit: int | None = None
 ) -> str | None:
     """Why the child can't pick this card right now, or None if they can.
 
     `show_score` is False when the parent has switched credit score tracking off for this child: the reason
     then says the card needs a stronger credit record without naming a number they can't see.
+    `limit` is this child's limit on the card when it differs from the card's own (a parent's starting limit).
     """
     if card.id == profile.current_card_id:
         return "This is your current plan."
@@ -141,6 +142,7 @@ def blocked_reason(
         return f"You need a score of {card.min_score}. Yours is {profile.score}."
     if card.id == "debit" and profile.balance > 0:
         return "Pay off your balance first. Debit has no borrowing."
-    if card.credit_limit and profile.balance > card.credit_limit:
+    cap = card.credit_limit if limit is None else limit
+    if cap and profile.balance > cap:
         return "Your balance is higher than this card's limit."
     return switch_locked_reason(profile)

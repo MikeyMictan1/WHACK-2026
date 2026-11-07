@@ -114,18 +114,20 @@ def seller_name(card: Card) -> str:
     return card.seller.split(" from ")[0]
 
 
-def opening_message(card: Card) -> str:
+def opening_message(card: Card, limit: int | None = None) -> str:
     template = OPENERS.get(
         card.id,
         "Hi, I'm {name}. {card} starts at {apr} APR with a {limit} limit. Tell me why you deserve a better rate, "
         "or ask me anything about the card.",
     )
-    return template.format(name=seller_name(card), card=card.name, apr=pct(card.listed_apr_bp), limit=money(card.credit_limit))
+    return template.format(name=seller_name(card), card=card.name, apr=pct(card.listed_apr_bp), limit=money(card.credit_limit if limit is None else limit))
 
 
 # ---- Claude bot ------------------------------------------------------------------
 
-def _system_prompt(profile: CreditProfile, card: Card, best_bp: int, turns_left: int, show_score: bool = True) -> str:
+def _system_prompt(
+    profile: CreditProfile, card: Card, best_bp: int, turns_left: int, show_score: bool = True, limit: int | None = None
+) -> str:
     utilisation = round(100 * profile.balance / profile.credit_limit) if profile.credit_limit else 0
     rise = f"{card.penalty_step_bp / 100:g} percentage points"  # how far rudeness moves this card's rate
     score_line = (
@@ -139,7 +141,7 @@ kids practise negotiating. All money is pretend. Stay in character: {PERSONAS.ge
 The child is aged {{BAND}}. Use that to set your words: 10-12 very simple and short; 13-15 plain and friendly; 16-18 \
 realistic, correct terms, treat them like a young adult.
 
-Card terms: listed APR {pct(card.listed_apr_bp)}, limit {money(card.credit_limit)}, rewards {pct(card.rewards_bp)} cash back, \
+Card terms: listed APR {pct(card.listed_apr_bp)}, limit {money(card.credit_limit if limit is None else limit)}, rewards {pct(card.rewards_bp)} cash back, \
 late fee {money(card.late_fee)}.
 About the child: {score_line}{profile.on_time_streak} months paid on time in a row, \
 using {utilisation}% of their limit, account open {profile.months_open} months, currently on a card at \
@@ -187,9 +189,10 @@ def claude_reply(
     seen_offers_bp: set[int],
     record: Record,
     show_score: bool = True,
+    limit: int | None = None,
 ) -> BotReply:
     """Raises HTTPException if the Claude API is unavailable; the caller falls back to the script."""
-    system = _system_prompt(profile, card, best_bp, turns_left, show_score).replace("{BAND}", age_band(age))
+    system = _system_prompt(profile, card, best_bp, turns_left, show_score, limit).replace("{BAND}", age_band(age))
     messages: list[dict] = [
         {"role": "user" if role == "child" else "assistant", "content": text} for role, text in history
     ]

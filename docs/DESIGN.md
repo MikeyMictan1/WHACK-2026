@@ -29,12 +29,15 @@ spend it on rewards, and watch their credit score react. Claude explains what th
 
 ## 3. Parent dashboard
 
-1. **Kids list:** one card per child (balance, score, next payment). "Add child account" button.
-2. **Child breakdown:** spending, score history, recent transactions, AI weekly recap.
+1. **Kids list** *(built)*: one row per child with balance, card, score (when tracking is on) and next payment, plus
+   "Add child" and a Breakdown link.
+2. **Child breakdown** *(built, `/dashboard/children/:id`)*: spending and earning by kind, what credit has cost,
+   score history with reasons, recent activity, statements, and an AI recap (name-free, numbers checked against the
+   backend's facts, built-in summary if Claude is down). Recap is written on request, not weekly.
 3. **Approvals:** incoming purchase requests (notification, then approve or deny).
 4. **Controls per child:**
    - Weekly allowance amount and payday
-   - Starting credit limit
+   - Starting credit limit *(built: 1 to 100 WC, applies to the starter card Whack Basic only)*
    - Which credit cards the child can access: parent picks the allowed set (for example 2 to
      start with, pre-selected by age so it's one tap to accept), and the child chooses between
      them at first login

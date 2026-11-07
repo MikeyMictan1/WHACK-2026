@@ -57,6 +57,8 @@ export type ChildInput = {
   weekly_allowance: number
   app_experience: string
   card_type: string
+  /** Minor units, 1.00 to 100.00 WC. null = the card's own limit. */
+  starting_credit_limit: number | null
   weekly_items: WeeklyItemInput[]
   milestones: MilestoneInput[]
 }
@@ -65,7 +67,7 @@ export type ChildInput = {
 export type ChildUpdate = Partial<
   Pick<
     ChildInput,
-    'display_name' | 'weekly_allowance' | 'app_experience' | 'card_type' | 'password' | 'weekly_items' | 'milestones'
+    'display_name' | 'weekly_allowance' | 'app_experience' | 'card_type' | 'password' | 'starting_credit_limit' | 'weekly_items' | 'milestones'
   >
 >
 

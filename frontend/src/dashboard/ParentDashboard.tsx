@@ -124,10 +124,12 @@ export function ParentDashboard({ parent }: { parent: User }) {
                       {child.weekly_allowance != null && ` · ${formatMoney(child.weekly_allowance)}/wk allowance`}
                       {child.app_experience && ` · ${APP_EXPERIENCE_PRESETS.includes(child.app_experience as never) ? child.app_experience : 'custom'} experience`}
                     </p>
-                    {credit[child.id] && <p className="meta mt-1">{creditLine(credit[child.id])}</p>}
                   </div>
                   {editingId !== child.id && (
                     <div className="flex flex-wrap gap-3">
+                      <ButtonLink to={`/dashboard/children/${child.id}`} size="sm">
+                        Breakdown
+                      </ButtonLink>
                       <Button size="sm" variant="light" className="border border-ink" onClick={() => onBonus(child)}>
                         Give bonus
                       </Button>
@@ -143,6 +145,8 @@ export function ParentDashboard({ parent }: { parent: User }) {
                     </div>
                   )}
                 </div>
+
+                <ChildStats credit={credit[child.id]} balance={balances[child.id] ?? 0} limit={child.starting_credit_limit} />
 
                 {editingId === child.id && (
                   <div className="mt-6 border-t border-line pt-6">
@@ -175,18 +179,35 @@ export function ParentDashboard({ parent }: { parent: User }) {
   )
 }
 
-/** One line about a child's card under their name. Their dates are their own: they move when you skip a month. */
-function creditLine(c: ChildCredit): string {
-  if (!c.has_credit) return `${c.card_name} (debit) · their date ${formatDate(c.sim_date)}`
-  const due =
-    c.statement_number !== null && c.status === 'open' && (c.statement_remaining ?? 0) > 0
-      ? `statement ${c.statement_number}: ${formatMoney(c.statement_remaining ?? 0)} due ${formatDate(c.due_date ?? c.sim_date)}`
-      : 'nothing to pay'
-  const score =
-    c.score !== null
-      ? ` · score ${c.score}${c.score_change ? ` (${c.score_change > 0 ? '+' : '−'}${Math.abs(c.score_change)})` : ''}`
-      : ''
-  return `${c.card_name} · owes ${formatMoney(c.owed)} · ${due}${score} · their date ${formatDate(c.sim_date)}`
+/** What matters about one child's card at a glance. Dates are the child's own: they move when you skip a month. */
+function ChildStats({ credit, balance, limit }: { credit: ChildCredit | undefined; balance: number; limit?: number | null }) {
+  if (!credit) return <Skeleton className="mt-5 h-14 w-full" />
+  const payable = credit.statement_number !== null && credit.status === 'open' && (credit.statement_remaining ?? 0) > 0
+  const next = !credit.has_credit
+    ? 'Debit, nothing to pay'
+    : payable
+      ? `${formatMoney(credit.statement_remaining ?? 0)} due ${formatDate(credit.due_date ?? credit.sim_date)}`
+      : 'Nothing to pay'
+  const stats: { label: string; value: string; note?: string }[] = [
+    { label: 'Balance', value: formatMoney(balance) },
+    { label: credit.card_name, value: credit.has_credit ? `Owes ${formatMoney(credit.owed)}` : 'Debit', note: limit ? `starts at ${formatMoney(limit)} limit` : undefined },
+  ]
+  if (credit.score !== null) {
+    const change = credit.score_change
+    stats.push({ label: 'Credit score', value: String(credit.score), note: change ? `${change > 0 ? '+' : '−'}${Math.abs(change)} last month` : undefined })
+  }
+  stats.push({ label: 'Next payment', value: next, note: `their date ${formatDate(credit.sim_date)}` })
+  return (
+    <dl className="mt-5 grid grid-cols-2 gap-px border border-line bg-line md:grid-cols-4">
+      {stats.map((st) => (
+        <div key={st.label} className="bg-paper px-4 py-3">
+          <dt className="meta">{st.label}</dt>
+          <dd className="mt-1 font-medium">{st.value}</dd>
+          {st.note && <dd className="text-xs text-muted">{st.note}</dd>}
+        </div>
+      ))}
+    </dl>
+  )
 }
 
 /** What skipping a month did, in a sentence or two. */
