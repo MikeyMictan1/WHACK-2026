@@ -6,7 +6,15 @@ from pydantic import BaseModel
 from app.controllers.deps import CurrentChild
 from app.core.database import SessionDep
 from app.models.card import Card, CreditProfile, allowed_ids, get_profile, list_cards
-from app.models.pricing import blocked_reason, monthly_interest, twelve_month_cost, typical_range_bp
+from app.models.pricing import (
+    blocked_reason,
+    estimate_balance,
+    estimate_is_example,
+    monthly_interest,
+    switch_locked_reason,
+    twelve_month_cost,
+    typical_range_bp,
+)
 
 router = APIRouter(prefix="/plans", tags=["plans"])
 
@@ -44,6 +52,10 @@ class PlanOption(BaseModel):
 class PlansResponse(BaseModel):
     current: CurrentPlan
     options: list[PlanOption]
+    # The interest figures use what the child really owes, or an example size if they owe nothing.
+    estimate_balance: int
+    estimate_is_example: bool
+    switch_locked_reason: str | None  # set after a plan change, until the next statement
 
 
 def current_plan(profile: CreditProfile, session: SessionDep) -> CurrentPlan:
@@ -75,7 +87,7 @@ def _option(profile: CreditProfile, card: Card, allowed: set[str] | None) -> Pla
         rewards_bp=card.rewards_bp,
         late_fee=card.late_fee,
         min_score=card.min_score,
-        monthly_interest=monthly_interest(profile.balance, card.listed_apr_bp),
+        monthly_interest=monthly_interest(estimate_balance(profile), card.listed_apr_bp),
         year_net_cost=twelve_month_cost(profile, card, card.listed_apr_bp).net,
         is_current=card.id == profile.current_card_id,
         blocked_reason=blocked_reason(profile, card, allowed),
@@ -90,4 +102,7 @@ def get_plans(child: CurrentChild, session: SessionDep) -> PlansResponse:
     return PlansResponse(
         current=current_plan(profile, session),
         options=[_option(profile, c, allowed) for c in list_cards(session)],
+        estimate_balance=estimate_balance(profile),
+        estimate_is_example=estimate_is_example(profile),
+        switch_locked_reason=switch_locked_reason(profile),
     )

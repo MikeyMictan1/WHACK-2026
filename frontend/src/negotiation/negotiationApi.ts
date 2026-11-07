@@ -35,6 +35,9 @@ export type NegotiationSession = {
   /** True if the offline fallback bot wrote any reply. */
   scripted: boolean
   messages: Message[]
+  /** The balance the year-ahead figures use (an example size when the child owes nothing). */
+  estimate_balance: number
+  estimate_is_example: boolean
   before: CostLine | null
   after: CostLine | null
   coach_note: string | null

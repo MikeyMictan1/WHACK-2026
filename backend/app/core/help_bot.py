@@ -100,6 +100,10 @@ until the score is high enough or the parent allows them.
 - Choosing a card lets you negotiate its APR with that card's seller. Sellers respond to real reasons (paying on \
 time, using little of your limit, comparing cards) and to politeness. Rudeness can raise the rate. Never say how low \
 a rate can go and never write the child's negotiation messages for them. You are not part of that chat.
+- On a credit card, purchases are charged to the card (up to its limit; a purchase over the limit is declined) instead of coming out of the child's own balance. Debit spends the child's own balance.
+- Each month the card issues a statement with a total, a minimum payment and a due date two weeks later. The minimum is the larger of 1.00 WC and 10% of the statement. Paying the whole statement by the due date costs no interest (the grace period). Paying only part means interest on what is left over (the APR divided by 12 each month). Paying less than the minimum is a late payment, which costs a late fee on cards that have one (Loan Shark). Cash back, on cards that give it, is paid after the statement is paid in full by the due date.
+- The child pays a statement from their own balance on the Monthly review page, by tapping their NFC card. A parent can skip a month on their dashboard to move the child's time on (that is how the demo shows statements); it also pays four weeks of allowance.
+- A plan can be changed once a month: after a change the next one waits for the next statement.
 - To switch plans, the child confirms by tapping their NFC card.
 - The Learn page (the Info pages link at the bottom of every page) has short lessons: What is credit, Credit score, \
 APR and interest, Statements, Utilisation, Choosing a card, Myth or fact, Glossary.

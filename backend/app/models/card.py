@@ -1,8 +1,10 @@
-"""The five credit cards a child can choose between, and the child's current credit profile.
+"""The five credit cards a child can choose between, and each child's credit account.
 
-Money is stored in minor units (hundredths of a Whack Coin, WC). APR is stored in basis points (2400 = 24.00%).
-The names are placeholders (see docs/DESIGN.md section 6) and are fictional.
+Money is stored in minor units (hundredths of a Whack Coin, WC). APR is stored in basis points (2000 = 20.00%).
+The card numbers follow docs/DESIGN.md section 6.1. The names are placeholders and are fictional.
 """
+
+from datetime import UTC, datetime
 
 from sqlmodel import Field, Session, SQLModel, select
 
@@ -16,32 +18,43 @@ class Card(SQLModel, table=True):
     pitch: str
     listed_apr_bp: int
     max_discount_bp: int  # the most negotiation can ever take off the listed APR
-    credit_limit: int
-    min_score: int
-    rewards_bp: int  # cash back on spending, in basis points
-    late_fee: int
+    credit_limit: int  # 0 = no credit (debit: you spend your own balance)
+    min_score: int  # 0 = no score needed
+    rewards_bp: int  # cash back on spending, in basis points (100 = 1%)
+    late_fee: int  # charged when a payment is late; 0 = this card has no late fee
+    # How hard rudeness is punished in a negotiation (basis points): the most one rude message can add to
+    # the APR, and the most the APR can ever be pushed above the listed rate.
+    penalty_step_bp: int = 100
+    max_penalty_bp: int = 300
     negotiable: bool = True
     seller: str  # who the child talks to, e.g. "Mia from Whack Basic"
 
 
 class CreditProfile(SQLModel, table=True):
-    """Stand-in for the credit side of a child until score, statements and transactions exist.
+    """A child's credit account: the card they are on, what they owe, and their simulated clock.
 
-    Created on first use with demo values. Replace `get_profile` (and the fields it fills) when the
-    real score and balance logic lands; everything else reads the profile through that one function.
+    Created on first use. `balance` is what the child owes on the card right now; it is only ever
+    changed together with a `CreditEntry` (see models/credit.py), which is the single place that does it.
+    `score` is still a placeholder number: it is not calculated from behaviour yet.
     """
 
     user_id: int = Field(primary_key=True, foreign_key="user.id")
-    score: int = 640
+    score: int = 640  # placeholder until the score is calculated
     current_card_id: str = "whack_basic"
-    current_apr_bp: int = 2499
-    credit_limit: int = 10_000
-    balance: int = 4_000
-    monthly_spend: int = 6_000
-    on_time_streak: int = 3  # months paid on time in a row
-    months_open: int = 4
+    current_apr_bp: int = 2000  # the APR this child actually pays (a negotiation can change it)
+    credit_limit: int = 2_000
+    balance: int = 0  # owed on the card, including purchases not yet on a statement
+    monthly_spend: int = 1_500  # a typical month's spending, used only for the rewards estimates
+    on_time_streak: int = 0  # statements in a row that were not paid late
+    months_open: int = 0
     # Comma-separated card ids the parent allows. Empty means every card is allowed.
     allowed_card_ids: str = ""
+
+    # The child's own clock. It only moves when a parent skips a month (models/credit.advance_month).
+    sim_now: datetime | None = None
+    opened_at: datetime | None = None
+    cycles_done: int = 0  # statements issued so far (the number of months skipped)
+    last_switch_cycle: int = -1  # `cycles_done` when the plan was last changed; one change per month
 
 
 # ---- Seed data ---------------------------------------------------------------
@@ -54,23 +67,24 @@ CARD_SEED: list[Card] = [
     ),
     Card(
         id="whack_basic", name="Whack Basic", tier=1, pitch="The starter card. Small limit, friendly terms.",
-        listed_apr_bp=2499, max_discount_bp=600, credit_limit=10_000, min_score=300, rewards_bp=0,
-        late_fee=500, seller="Mia from Whack Basic",
+        listed_apr_bp=2000, max_discount_bp=400, credit_limit=2_000, min_score=0, rewards_bp=0,
+        late_fee=0, seller="Mia from Whack Basic",
     ),
     Card(
         id="chip", name="CapOne Chip", tier=2, pitch="A step up. A higher limit and a little cash back.",
-        listed_apr_bp=1999, max_discount_bp=500, credit_limit=25_000, min_score=550, rewards_bp=100,
-        late_fee=800, seller="Simon Smith from CapOne Chip",
+        listed_apr_bp=1500, max_discount_bp=300, credit_limit=5_000, min_score=600, rewards_bp=100,
+        late_fee=0, seller="Simon Smith from CapOne Chip",
     ),
     Card(
         id="venture_w", name="Venture W", tier=3, pitch="Best rewards and the lowest rates, for strong scores.",
-        listed_apr_bp=1799, max_discount_bp=400, credit_limit=50_000, min_score=680, rewards_bp=200,
-        late_fee=1_500, seller="Priya from Venture W",
+        listed_apr_bp=1000, max_discount_bp=200, credit_limit=15_000, min_score=720, rewards_bp=300,
+        late_fee=0, seller="Priya from Venture W",
     ),
     Card(
         id="loan_shark", name="Loan Shark", tier=4, pitch="Instant approval, no questions. Look at the interest.",
-        listed_apr_bp=3999, max_discount_bp=100, credit_limit=15_000, min_score=300, rewards_bp=0,
-        late_fee=3_500, seller="Linguini from Loan Shark",
+        listed_apr_bp=9000, max_discount_bp=100, credit_limit=10_000, min_score=0, rewards_bp=0,
+        late_fee=500, seller="Linguini from Loan Shark",
+        penalty_step_bp=250, max_penalty_bp=500,  # he punishes rudeness hard: up to 5 points above his rate
     ),
 ]
 
@@ -105,9 +119,36 @@ def get_card(session: Session, card_id: str) -> Card | None:
 
 
 def get_profile(session: Session, user_id: int) -> CreditProfile:
+    """The child's credit account, created on first use as a fresh account on the starter card."""
     profile = session.get(CreditProfile, user_id)
+    now = datetime.now(UTC)
     if profile is None:
-        profile = CreditProfile(user_id=user_id)
+        starter = get_card(session, "whack_basic")
+        assert starter is not None
+        profile = CreditProfile(
+            user_id=user_id,
+            current_card_id=starter.id,
+            current_apr_bp=starter.listed_apr_bp,
+            credit_limit=starter.credit_limit,
+            sim_now=now,
+            opened_at=now,
+        )
+        session.add(profile)
+        session.commit()
+        session.refresh(profile)
+    elif profile.sim_now is None:
+        # Made before the credit core existed, when balance, limit and APR were demo numbers.
+        # Start a real account on the same card.
+        card = get_card(session, profile.current_card_id) or get_card(session, "whack_basic")
+        assert card is not None
+        profile.current_card_id = card.id
+        profile.current_apr_bp = card.listed_apr_bp
+        profile.credit_limit = card.credit_limit
+        profile.balance = 0
+        profile.on_time_streak = 0
+        profile.months_open = 0
+        profile.sim_now = now
+        profile.opened_at = now
         session.add(profile)
         session.commit()
         session.refresh(profile)

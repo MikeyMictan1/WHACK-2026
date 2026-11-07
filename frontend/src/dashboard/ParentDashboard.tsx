@@ -5,6 +5,7 @@ import { Button, ButtonLink } from '../components/ui/Button.tsx'
 import { FormError } from '../components/ui/FormError.tsx'
 import { Skeleton } from '../components/ui/Skeleton.tsx'
 import { showToast } from '../components/ui/toast.ts'
+import { STATUS_LABEL, creditApi, formatDate, type ChildCredit, type SkipResult } from '../credit/creditApi.ts'
 import { CURRENCY_LABEL, formatMoney, parseMoney } from '../lib/money.ts'
 import { shopApi } from '../shop/shopApi.ts'
 import { ChildForm } from './ChildForm.tsx'
@@ -18,9 +19,14 @@ export function ParentDashboard({ parent }: { parent: User }) {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [balances, setBalances] = useState<Record<string, number>>({})
+  const [credit, setCredit] = useState<Record<number, ChildCredit>>({})
 
   function loadBalances() {
     shopApi.balances().then(setBalances).catch(() => {})
+    creditApi
+      .children()
+      .then((list) => setCredit(Object.fromEntries(list.map((c) => [c.child_id, c]))))
+      .catch(() => {})
   }
 
   useEffect(() => {
@@ -40,6 +46,21 @@ export function ParentDashboard({ parent }: { parent: User }) {
       await shopApi.bonus(child.id, amount, 'Bonus from parent')
       loadBalances()
       showToast(`Gave ${nameOf(child)} ${formatMoney(amount)}`)
+    } catch (err) {
+      showToast((err as Error).message, 'error')
+    }
+  }
+
+  async function onSkip(child: Child) {
+    const ok = window.confirm(
+      `Skip a month for ${nameOf(child)}? It pays 4 weeks of allowance, closes their statement, charges interest or a ` +
+        'late fee if they have not paid, and issues a new statement. It cannot be undone.',
+    )
+    if (!ok) return
+    try {
+      const result = await creditApi.skipMonth(child.id)
+      loadBalances()
+      showToast(skipMessage(result))
     } catch (err) {
       showToast((err as Error).message, 'error')
     }
@@ -103,11 +124,15 @@ export function ParentDashboard({ parent }: { parent: User }) {
                       {child.weekly_allowance != null && ` · ${formatMoney(child.weekly_allowance)}/wk allowance`}
                       {child.app_experience && ` · ${APP_EXPERIENCE_PRESETS.includes(child.app_experience as never) ? child.app_experience : 'custom'} experience`}
                     </p>
+                    {credit[child.id] && <p className="meta mt-1">{creditLine(credit[child.id])}</p>}
                   </div>
                   {editingId !== child.id && (
                     <div className="flex flex-wrap gap-3">
                       <Button size="sm" variant="light" className="border border-ink" onClick={() => onBonus(child)}>
                         Give bonus
+                      </Button>
+                      <Button size="sm" variant="light" className="border border-ink" onClick={() => onSkip(child)}>
+                        Skip a month
                       </Button>
                       <Button size="sm" variant="light" className="border border-ink" onClick={() => setEditingId(child.id)}>
                         Edit
@@ -148,4 +173,28 @@ export function ParentDashboard({ parent }: { parent: User }) {
       </section>
     </>
   )
+}
+
+/** One line about a child's card under their name. Their dates are their own: they move when you skip a month. */
+function creditLine(c: ChildCredit): string {
+  if (!c.has_credit) return `${c.card_name} (debit) · their date ${formatDate(c.sim_date)}`
+  const due =
+    c.statement_number !== null && c.status === 'open' && (c.statement_remaining ?? 0) > 0
+      ? `statement ${c.statement_number}: ${formatMoney(c.statement_remaining ?? 0)} due ${formatDate(c.due_date ?? c.sim_date)}`
+      : 'nothing to pay'
+  return `${c.card_name} · owes ${formatMoney(c.owed)} · ${due} · their date ${formatDate(c.sim_date)}`
+}
+
+/** What skipping a month did, in a sentence or two. */
+function skipMessage(r: SkipResult): string {
+  const parts = [`${r.child_name}: a month passed`]
+  if (r.allowance > 0) parts.push(`${formatMoney(r.allowance)} allowance paid`)
+  if (r.previous_number !== null && r.outcome) {
+    const label = r.outcome === 'paid' ? STATUS_LABEL.paid : r.outcome === 'carried' ? STATUS_LABEL.carried : STATUS_LABEL.late
+    parts.push(`statement ${r.previous_number}: ${label.toLowerCase()}`)
+  }
+  if (r.interest > 0) parts.push(`${formatMoney(r.interest)} interest`)
+  if (r.late_fee > 0) parts.push(`${formatMoney(r.late_fee)} late fee`)
+  if (r.statement) parts.push(`new statement ${r.statement.number}: ${formatMoney(r.statement.total)} due ${formatDate(r.statement.due_date)}`)
+  return parts.join(', ')
 }

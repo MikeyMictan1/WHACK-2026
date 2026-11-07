@@ -46,7 +46,9 @@ export function ConfirmSwitch({ session, onConfirmed, onBack }: Props) {
       {before && after && (
         <table className="mt-8 w-full border-t border-ink text-left">
           <caption className="meta pb-2 text-left">
-            A year ahead if your balance and spending stay the same
+            {session.estimate_is_example
+              ? `A year ahead on an example balance of ${money(session.estimate_balance)}, so you can see the cost at real-life size`
+              : 'A year ahead if your balance and spending stay the same'}
           </caption>
           <thead>
             <tr className="border-b border-ink/15">

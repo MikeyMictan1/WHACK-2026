@@ -11,9 +11,25 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.controllers.deps import CurrentParent, CurrentUser
-from app.controllers.nfc_controller import phone_tap_uid, require_own_card, wait_for_card_tap
+from app.controllers.nfc_controller import (
+    phone_tap_uid,
+    require_own_card,
+    wait_for_card_tap,
+)
 from app.core.config import settings
 from app.core.database import SessionDep
+from app.models.card import get_card, get_profile
+from app.models.credit import (
+    CreditEntry,
+    available_credit,
+    aware,
+    charge_purchase,
+    is_credit,
+    purchase_block_reason,
+)
+from app.models.led import ensure_skin_rewards, owned_skins, skin_for_reward
+from app.models.pricing import money
+from app.models.push import notify
 from app.models.shop import (
     OPEN_STATUSES,
     BonusCreate,
@@ -37,9 +53,6 @@ from app.models.shop import (
     utcnow,
     weekly_available_again,
 )
-from app.models.pricing import money
-from app.models.push import notify
-from app.models.led import ensure_skin_rewards, owned_skins, skin_for_reward
 from app.models.user import User, get_child, list_children
 
 router = APIRouter(prefix="/shop", tags=["shop"])
@@ -70,6 +83,7 @@ def _public(session: Session, req: PurchaseRequest) -> PurchaseRequestPublic:
         status=req.status,
         created_at=req.created_at,
         expires_in_seconds=expires_in(req),
+        paid_with=req.paid_with,
     )
 
 
@@ -146,6 +160,23 @@ def wallet(user: CurrentUser, session: SessionDep) -> Wallet:
         .order_by(col(LedgerEntry.created_at).desc())
         .limit(20)
     ).all()
+    # Purchases on the card do not touch the balance, but they belong in the child's transactions.
+    card_purchases = session.exec(
+        select(CreditEntry)
+        .where(CreditEntry.child_id == child.id, CreditEntry.kind == "purchase")
+        .order_by(col(CreditEntry.created_at).desc())
+        .limit(20)
+    ).all()
+    profile = get_profile(session, child.id)
+    plan_card = get_card(session, profile.current_card_id)
+    on_credit = is_credit(profile)
+    transactions = [LedgerEntryPublic(**e.model_dump()) for e in entries] + [  # type: ignore[arg-type]
+        LedgerEntryPublic(
+            id=-(c.id or 0), amount=-c.amount, kind="card purchase", description=c.description, created_at=c.created_at
+        )
+        for c in card_purchases
+    ]
+    transactions.sort(key=lambda t: aware(t.created_at), reverse=True)
     owned = session.exec(
         select(PurchaseRequest)
         .where(PurchaseRequest.child_id == child.id, PurchaseRequest.status == "paid")
@@ -154,7 +185,10 @@ def wallet(user: CurrentUser, session: SessionDep) -> Wallet:
     card = session.exec(select(CardLink).where(CardLink.child_id == child.id)).first()
     return Wallet(
         balance=balance_of(session, child.id),
-        entries=[LedgerEntryPublic(**e.model_dump()) for e in entries],  # type: ignore[arg-type]
+        spend_from="credit" if on_credit else "balance",
+        spendable=available_credit(profile) if on_credit else balance_of(session, child.id),
+        card_name=plan_card.name if plan_card else "",
+        entries=transactions[:20],
         owned=[_public(session, r) for r in owned],
         card_linked=card is not None,
     )
@@ -193,8 +227,9 @@ def request_purchase(data: PurchaseRequestCreate, user: CurrentUser, session: Se
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"You can buy this again on {again:%A %d %B}")
     if reward.kind == "led_skin" and skin_for_reward(session, reward.id) in owned_skins(session, child):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "You already own this skin")
-    if balance_of(session, child.id) < reward.price:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "You don't have enough money for this yet")
+    profile = get_profile(session, child.id)
+    if reason := purchase_block_reason(session, profile, reward.price, at_tap=False):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, reason)
 
     req = PurchaseRequest(
         child_id=child.id, reward_id=reward.id, title=reward.title, price=reward.price, kind=reward.kind
@@ -294,6 +329,7 @@ def pay(
     req = _request_for(session, child, request_id)
     if req.status != "approved":
         raise HTTPException(status.HTTP_409_CONFLICT, "This purchase isn't approved yet")
+    profile = get_profile(session, child.id)  # before the tap: making a new profile commits
 
     if simulate:
         if not settings.allow_simulated_tap:
@@ -324,8 +360,13 @@ def pay(
     # Win the purchase first. One UPDATE decides, so if the child's taps, retries or double clicks reach
     # us together, exactly one gets to charge. The others find it already paid and stop here.
     assert req.id is not None
+    on_credit = False
     try:
-        won = set_status_if(session, req.id, ("approved",), "paid", paid_at=utcnow())
+        session.refresh(profile)  # we may have waited a while for the tap (this flushes a new card link)
+        on_credit = is_credit(profile)
+        won = set_status_if(
+            session, req.id, ("approved",), "paid", paid_at=utcnow(), paid_with="credit" if on_credit else "balance"
+        )
     except IntegrityError:  # two first taps racing to link the same card: the other one got there first
         won = False
     if not won:
@@ -333,11 +374,16 @@ def pay(
         session.refresh(req)
         raise HTTPException(status.HTTP_409_CONFLICT, f"This purchase is {req.status}")
     # Still inside the same transaction: if they cannot afford it, leaving here undoes the claim above.
-    if balance_of(session, child.id) < req.price:
+    if reason := purchase_block_reason(session, profile, req.price, at_tap=True):
         session.rollback()
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "You don't have enough money for this any more")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, reason)
 
-    add_entry(session, child_id=child.id, amount=-req.price, kind="purchase", description=req.title)
+    if on_credit:
+        card = get_card(session, profile.current_card_id)
+        assert card is not None
+        charge_purchase(session, profile, card, req.price, req.title)
+    else:
+        add_entry(session, child_id=child.id, amount=-req.price, kind="purchase", description=req.title)
     session.commit()  # the status, the money and (on a first tap) the card link land together
     session.refresh(req)
     return _public(session, req)

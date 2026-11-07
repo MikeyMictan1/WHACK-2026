@@ -5,8 +5,10 @@
 
 Demo logins (play money only, local use):
     parent   demo_parent   whack-demo-1    has example rewards and chores, and sees both kids
-    child    demo_kid      1234            younger kid on the starter plan
+    child    demo_kid      1234            younger kid on the starter card (Whack Basic)
     child    demo_teen     1234            older kid with a stronger record (can unlock Venture W)
+Each kid starts with some money in their balance, so they can buy things and pay statements.
+Use the parent dashboard's "Skip a month" to issue statements.
 """
 
 import argparse
@@ -18,7 +20,7 @@ from app.core.security import hash_password
 from app.models.card import get_profile
 from app.models.led import ensure_skin_rewards
 from app.models.milestone import MilestoneInput, replace_milestones
-from app.models.shop import add_starter_items
+from app.models.shop import add_entry, add_starter_items
 from app.models.user import User, create_user, get_user_by_username
 from app.models.weekly_item import WeeklyItemInput, replace_weekly_items
 
@@ -34,7 +36,8 @@ CHILDREN = [
         "card_type": "deer_debit,cap_one",
         "items": [("Ice cream", 300, 2), ("Extra screen time", 500, 1)],
         "milestones": [("New bike", 20000)],
-        "profile": {},  # the default demo profile: score 640, on Whack Basic
+        "start_money": 2000,  # 20.00 WC in their own balance
+        "profile": {},  # a fresh credit account: score 640, on Whack Basic, owing nothing
     },
     {
         "username": "demo_teen",
@@ -45,7 +48,9 @@ CHILDREN = [
         "card_type": "cap_one,venture_w,shark_father",
         "items": [("Cinema ticket", 800, 1), ("Snacks", 250, 3)],
         "milestones": [("Concert ticket", 12000), ("Headphones", 8000)],
-        "profile": {"score": 710, "on_time_streak": 6, "balance": 1000, "months_open": 9},
+        "start_money": 5000,
+        # A history from before the app: it only sets the placeholder score and the account's age.
+        "profile": {"score": 710, "on_time_streak": 6, "months_open": 9},
     },
 ]
 
@@ -86,7 +91,8 @@ def _get_or_create_child(session: Session, parent: User, spec: dict) -> None:
     assert child.id is not None
     replace_weekly_items(session, child.id, [WeeklyItemInput(name=n, cost=c, weekly_limit=w) for n, c, w in spec["items"]])
     replace_milestones(session, child.id, [MilestoneInput(name=n, cost=c) for n, c in spec["milestones"]])
-    profile = get_profile(session, child.id)  # creates the demo credit profile
+    add_entry(session, child_id=child.id, amount=spec["start_money"], kind="bonus", description="Starting money")
+    profile = get_profile(session, child.id)  # creates the credit account
     for field, value in spec["profile"].items():
         setattr(profile, field, value)
     session.add(profile)

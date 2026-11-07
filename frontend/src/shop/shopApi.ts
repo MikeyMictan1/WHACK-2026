@@ -40,12 +40,18 @@ export type PurchaseRequest = {
   status: PurchaseStatus
   created_at: string
   expires_in_seconds: number | null
+  /** Once paid: charged to the child's card, or taken from their own balance. */
+  paid_with: 'credit' | 'balance' | null
 }
 
 export type LedgerEntry = { id: number; amount: number; kind: string; description: string; created_at: string }
 
 export type Wallet = {
   balance: number
+  /** What a purchase comes out of: the card's available credit, or (on Debit) their own balance. */
+  spend_from: 'credit' | 'balance'
+  spendable: number
+  card_name: string
   entries: LedgerEntry[]
   owned: PurchaseRequest[]
   card_linked: boolean

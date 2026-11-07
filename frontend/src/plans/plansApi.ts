@@ -30,7 +30,15 @@ export type PlanOption = {
   blocked_reason: string | null
 }
 
-export type PlansResponse = { current: CurrentPlan; options: PlanOption[] }
+export type PlansResponse = {
+  current: CurrentPlan
+  options: PlanOption[]
+  /** The interest figures use what the child owes, or an example size when they owe nothing. */
+  estimate_balance: number
+  estimate_is_example: boolean
+  /** Set after a plan change, until the next statement. */
+  switch_locked_reason: string | null
+}
 
 /** Child accounts only: a parent session gets a 403. */
 export const plansApi = {

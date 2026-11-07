@@ -33,6 +33,8 @@ class NegotiationSession(SQLModel, table=True):
     listed_apr_bp: int
     floor_apr_bp: int  # private: never returned by the API
     best_offer_bp: int
+    penalty_step_bp: int = 100  # how hard this card punishes rudeness (copied from the card)
+    max_penalty_bp: int = 300
     status: str = "active"
     turns_used: int = 0
     max_turns: int = MAX_TURNS
@@ -116,6 +118,8 @@ def start_session(db: Session, profile: CreditProfile, card: Card, floor_bp: int
         listed_apr_bp=card.listed_apr_bp,
         floor_apr_bp=floor_bp if negotiable else card.listed_apr_bp,
         best_offer_bp=card.listed_apr_bp,
+        penalty_step_bp=card.penalty_step_bp,
+        max_penalty_bp=card.max_penalty_bp,
         status="active" if negotiable else "agreed",  # a card with nothing to haggle over skips to confirm
     )
     db.add(neg)
@@ -131,7 +135,8 @@ def record_offer(db: Session, neg: NegotiationSession, requested_bp: int) -> int
         listed_bp=neg.listed_apr_bp,
         floor_bp=neg.floor_apr_bp,
         best_bp=neg.best_offer_bp,
-        ceiling_bp=ceiling_apr_bp(neg.listed_apr_bp),
+        ceiling_bp=ceiling_apr_bp(neg.listed_apr_bp, neg.max_penalty_bp),
+        penalty_step_bp=neg.penalty_step_bp,
     )
     neg.best_offer_bp = offer
     db.add(neg)
@@ -164,7 +169,7 @@ def confirm_switch(db: Session, neg: NegotiationSession, profile: CreditProfile,
         return None  # a double click or retry: already done
     if neg.status != "agreed":
         return "This negotiation is not ready to confirm. Accept an offer first."
-    if neg.best_offer_bp < neg.floor_apr_bp or neg.best_offer_bp > ceiling_apr_bp(neg.listed_apr_bp):
+    if neg.best_offer_bp < neg.floor_apr_bp or neg.best_offer_bp > ceiling_apr_bp(neg.listed_apr_bp, neg.max_penalty_bp):
         return "That offer is not valid."
     if profile.current_card_id == card.id:
         return "You are already on this plan."
@@ -175,6 +180,7 @@ def confirm_switch(db: Session, neg: NegotiationSession, profile: CreditProfile,
     profile.current_card_id = card.id
     profile.current_apr_bp = neg.best_offer_bp
     profile.credit_limit = card.credit_limit
+    profile.last_switch_cycle = profile.cycles_done  # one change per month: the next waits for a statement
     neg.status = "confirmed"
     neg.updated_at = _now()
     db.add(profile)

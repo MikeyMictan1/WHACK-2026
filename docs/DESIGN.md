@@ -109,10 +109,12 @@ The backend computes all numbers. Claude only explains them.
 
 **Monthly:** score updates, plan changes (APR, limit), kid can switch within what the parent allows.
 
-### 6.1 POTENTIAL CREDIT CARD UPDATE (proposal, not built)
+### 6.1 Credit card numbers and rules *(Built, except the score)*
 
-Status: no credit code exists yet. Kids spend their own balance only. This section proposes
-numbers for the cards above so the credit core (NEXT_STEPS.md step 5) has something concrete to
+Status: built (`models/credit.py`, `models/card.py`, `controllers/credit_controller.py`). A child on a
+credit card spends on the card; on Debit they spend their own balance. The score is still a
+placeholder number. The card numbers below are the ones in the app; they were first proposed so the
+credit core had something concrete to
 build against. All values are starting points; tune them after a playtest.
 
 | Card | Limit | APR | Score needed | Perk | Notes |
@@ -148,7 +150,31 @@ options:
 
 Recommended: option 2. It stays honest and still lands the point.
 
-**Build needs:**
+**As built** (choices the rules above left open):
+
+- A child has their own clock. It only moves when a parent presses "Skip a month" on the dashboard.
+  One month is 4 weeks (28 days), so each skip also pays 4 weekly allowances. A statement is due 14 days
+  after it is issued.
+- Skipping a month closes the books: the previous statement's due date passes (paid in full, minimum paid, or
+  late), interest and any late fee are charged, and a new statement is issued. Payments happen between
+  skips, so they are always before the due date.
+- Interest is on the unpaid part of the previous statement, at the APR in force on statement day. Paid in full
+  by the due date means none (the grace period).
+- The minimum is the larger of 1.00 WC and 10%, never more than the statement. Below it by the due date is
+  late: the late fee (Loan Shark only) and a broken on-time streak. Paying the minimum or more is not late; the
+  rest is carried over and charged interest.
+- Cash back is paid into the child's balance when a statement is paid in full by its due date. A carried or
+  late statement forfeits it. Each purchase earns the rate of the card it was bought on.
+- An over-limit purchase is refused when the child asks and again at the tap, with the reason. Interest and
+  fees can push the balance over the limit.
+- One plan change a month: after a change the next waits for the next statement. The balance carries over to
+  the new card, which must have a limit at least as high as what is owed. Debit needs a zero balance.
+- The Monthly review and the Plans page show interest at an example size (1,000 WC) when the child owes
+  nothing, as recommended above (option 2).
+- Not built here: the score from behaviour and the "why it moved" reasons, a payday setting, and the parent's
+  allowed-card set (the add-child form stores one, but the Plans page does not read it yet).
+
+**Build needs** (all built except the score):
 
 1. Simulated time first ("Skip a month" for parents; NEXT_STEPS.md step 4).
 2. A card record per child: card type, limit, APR, opened date.

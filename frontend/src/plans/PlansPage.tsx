@@ -42,9 +42,17 @@ export function PlansPage() {
           <>
             <CurrentSummary plan={data.current} />
 
+            {data.switch_locked_reason && (
+              <p className="mt-6 max-w-prose border border-ink/20 bg-sky px-5 py-4 text-sm">{data.switch_locked_reason}</p>
+            )}
+
             <div className="mt-12 flex flex-wrap items-end justify-between gap-4 border-b border-ink pb-4">
               <h2 className="text-d3 font-light tracking-[-0.02em]">Plans</h2>
-              <p className="meta">Interest estimates use your balance of {money(data.current.balance)}.</p>
+              <p className="meta">
+                {data.estimate_is_example
+                  ? `Interest figures use an example balance of ${money(data.estimate_balance)}, so you can see the cost at real-life size.`
+                  : `Interest figures use what you owe: ${money(data.estimate_balance)}.`}
+              </p>
             </div>
 
             <ul>

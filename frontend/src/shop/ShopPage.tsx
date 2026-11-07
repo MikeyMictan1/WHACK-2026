@@ -46,14 +46,21 @@ function ChildShop() {
     }
   }
 
-  const balance = wallet?.balance ?? 0
+  const spendable = wallet?.spendable ?? 0
+  const onCredit = wallet?.spend_from === 'credit'
 
   return (
     <>
       <PageHeader
         marker="Shop"
         title="Rewards."
-        description={wallet ? `You have ${formatMoney(balance)} to spend.` : 'Loading your balance…'}
+        description={
+          wallet
+            ? onCredit
+              ? `You have ${formatMoney(spendable)} of credit left on your ${wallet.card_name} card.`
+              : `You have ${formatMoney(spendable)} to spend.`
+            : 'Loading your balance…'
+        }
       />
 
       <section className="container-x py-10 md:py-14">
@@ -86,7 +93,7 @@ function ChildShop() {
                 </div>
                 <ul className="-mx-4 mt-6 flex snap-x gap-4 overflow-x-auto px-4 pb-4">
                   {items.map((r) => (
-                    <RewardCard key={r.id} reward={r} balance={balance} onBuy={() => buy(r)} />
+                    <RewardCard key={r.id} reward={r} spendable={spendable} onCredit={onCredit} onBuy={() => buy(r)} />
                   ))}
                 </ul>
               </div>
@@ -122,15 +129,25 @@ function ChildShop() {
   )
 }
 
-function RewardCard({ reward, balance, onBuy }: { reward: Reward; balance: number; onBuy: () => void }) {
-  const short = Math.max(0, reward.price - balance)
+function RewardCard({
+  reward,
+  spendable,
+  onCredit,
+  onBuy,
+}: {
+  reward: Reward
+  spendable: number
+  onCredit: boolean
+  onBuy: () => void
+}) {
+  const short = Math.max(0, reward.price - spendable)
   const again = reward.available_again_at ? new Date(reward.available_again_at) : null
-  const progress = Math.min(100, Math.round((balance / reward.price) * 100))
+  const progress = Math.min(100, Math.round((spendable / reward.price) * 100))
 
   let blocker: string | null = null
   if (reward.owned) blocker = 'Owned. Equip it in LED Home'
   else if (again) blocker = `Again on ${again.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}`
-  else if (short > 0) blocker = `${formatMoney(short)} to go`
+  else if (short > 0) blocker = onCredit ? `${formatMoney(short)} more than your credit left` : `${formatMoney(short)} to go`
 
   return (
     <li className="flex w-60 shrink-0 snap-start flex-col border border-ink/15 bg-white p-5">
@@ -143,7 +160,7 @@ function RewardCard({ reward, balance, onBuy }: { reward: Reward; balance: numbe
           <div className="h-2 w-full bg-ink/10" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label={`Saved ${progress}%`}>
             <div className="h-full bg-signal" style={{ width: `${progress}%` }} />
           </div>
-          <p className="meta mt-2">{progress}% saved</p>
+          <p className="meta mt-2">{progress}% {onCredit ? 'covered by your credit' : 'saved'}</p>
         </div>
       )}
 
