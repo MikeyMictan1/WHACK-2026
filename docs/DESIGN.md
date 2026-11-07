@@ -50,8 +50,8 @@ spend it on rewards, and watch their credit score react. Claude explains what th
 
 Matches the designer's mocks.
 
-1. **Home:** current balance, available credit, breakdown chart, payment due date, recent transactions.
-   Side panel is decor space for owned cosmetics.
+1. **Home** *(built)*: current balance, credit left, payment due date, spending chart (by kind), recent
+   transactions. Left and right side panels show placed decor.
 2. **Rewards:** three rows of item cards.
    - In-game (cosmetics, decor)
    - Weekly (small items)
@@ -59,7 +59,8 @@ Matches the designer's mocks.
 3. **Earn money:** chores and extracurriculars the parent has added. Kid marks done, parent approves.
 4. **Monthly review:** AI summary, new credit score, updated plan (interest, limit), "Change plan?".
 5. **Change plan:** lists cards the parent allows, with a "Negotiate?" button leading to the AI chat.
-6. **Decor:** owned items can be placed in left and right screen sections.
+6. **Decor** *(built, `/decor`)*: owned in-game items placed in the left and right panels (4 per side; pick an item,
+   then a side).
 7. **Learn:** info pages about credit (see 4.1). Linked from the nav, from the score on Home,
    and from the monthly review.
 

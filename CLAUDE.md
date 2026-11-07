@@ -163,6 +163,12 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
 - `core/recap_bot.py`: the facts sheet is built in code, Claude only writes JSON sentences from it, any number not in the
   facts is rejected (one retry), then `template_recap`. Never send the child's name. Saved in `Recap` (deleted with the child).
 
+## Child home: decor and spending chart
+
+- Decor = any in-game reward the child has paid for (`models/decor.owned_decor`). `DecorPlacement` stores side and slot;
+  `PUT /api/decor` saves the whole layout (owned only, once each, 4 per side). `GET /api/decor/spending` feeds the Home chart
+  (reuses `models/breakdown.spending_breakdown`). Frontend: `decor/` (page, panel, tile); no art exists, tiles show the item's initial.
+
 ## Change plan and negotiation
 
 Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plans_controller`) ->
