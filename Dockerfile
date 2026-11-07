@@ -14,10 +14,10 @@ RUN npm run build --prefix frontend
 # ---- 2. the backend, serving the build ----------------------------------------------
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-# pyscard (NFC) compiles against PC/SC. There's no reader in the cloud, so NFC just stays idle,
-# but the package still has to install.
+# pyscard (NFC) has no Linux wheel, so it compiles here: gcc + libc6-dev (C headers), swig, and the
+# PC/SC library. There's no reader in the cloud, so NFC just stays idle, but the package has to install.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc swig libpcsclite-dev libpcsclite1 \
+    && apt-get install -y --no-install-recommends gcc libc6-dev swig libpcsclite-dev libpcsclite1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/backend
