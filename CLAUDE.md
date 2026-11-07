@@ -52,6 +52,8 @@ frontend/src/
   dashboard/         /dashboard: ParentDashboard (approvals, manage kids) or ChildDashboard, by user.role
   shop/  earn/  manage/  child /shop (+ PurchaseFlow overlay), child /earn, parent /manage; shopApi.ts
   led/               /led "LED Home": live LedGrid of the board + wardrobe of skins
+  learn/             /learn info pages: expandable lessons with small demos; text lives in learn/content.ts
+  help/              the Ask button (bottom right, every page except the negotiation chat) and its chat panel
   front-page/  ai-feature/  profile/  vault/  nfc/  legal/  not-found/
   assets/            backdrop/, carousel/, mascot/ images (numbered PNGs, see each README)
 hardware/unicorn/    whack_grid.py, MicroPython that runs on the LED board
@@ -139,6 +141,16 @@ Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plan
   **Never write to `unicorn` directly**: the LED Home display loop owns the board and would
   overwrite it. Use `led_overlay.show(frame, seconds)` for any event feedback.
 - `ALLOW_SIMULATED_TAP` (config) enables the dev-only simulate button on the confirm screen.
+
+## Info pages and the AI helper
+
+- `/learn` (footer link "Info pages") holds eight lessons from `learn/content.ts`; `/learn#apr` opens one.
+  Demo numbers are examples computed in the browser, not account data.
+- `POST /api/help/chat` (`help_controller`, `core/help_bot.py`) answers credit and app questions. Open to
+  everyone; a signed-in child's answers also know their score, plan and APR. Questions are saved in
+  `HelpMessage` for parents. It is rate limited, falls back to a short scripted answer if Claude is down,
+  and must never reveal negotiation floor rates. Lesson ids and titles in `help_bot.TOPICS` mirror
+  `learn/content.ts`; keep them in step when adding a lesson.
 
 ## Hardware
 
