@@ -6,7 +6,8 @@ export type CurrentPlan = {
   apr_bp: number
   credit_limit: number
   balance: number
-  score: number
+  /** Null when the parent has switched credit score tracking off. */
+  score: number | null
   on_time_streak: number
   utilisation_pct: number
   interest_this_month: number

@@ -3,6 +3,7 @@
 from app.models.card import Card, CreditProfile
 from app.models.clock import SiteClock
 from app.models.credit import CreditEntry, Statement
+from app.models.score import ScoreEvent
 from app.models.help import HelpMessage
 from app.models.led import LedEquip, RewardSkin
 from app.models.milestone import Milestone
@@ -46,6 +47,7 @@ __all__ = [
     "PushKeys",
     "PushSubscription",
     "Reward",
+    "ScoreEvent",
     "RewardSkin",
     "SiteClock",
     "Statement",

@@ -109,11 +109,25 @@ The backend computes all numbers. Claude only explains them.
 
 **Monthly:** score updates, plan changes (APR, limit), kid can switch within what the parent allows.
 
-### 6.1 Credit card numbers and rules *(Built, except the score)*
+**Score, as built** (`models/score.py`): 300 plus three parts, so 300 to 800.
+
+| Part | Points | How it moves |
+|---|---|---|
+| Payment history | up to 250 (50%) | Each statement paid on time (in full or at least the minimum) closes 12% of the gap to 250. A late one costs 40 points or 30% of what was built up, whichever is more. |
+| Credit used | up to 150 (30%) | Statement total divided by the limit: full marks at 10% or less, then falling in straight lines through 30% (105), 50% (60) to 0 at 100%. |
+| Length of history | up to 100 (20%) | 100 over the first 12 months open. |
+
+- A new account starts at 580 (Fair). CapOne Chip needs 600 and Venture W 720, so good habits unlock cards.
+- It is recalculated once a month, when a statement is issued ("Skip a month"). Every change is saved with its reason (`ScoreEvent`), for example "+14 Statement 1 paid in full on time" or "-34 You used 25% of your limit".
+- Debit has no credit to measure, so only a statement paid on time counts there; usage and history are left alone.
+- The backend always tracks it. A parent decides whether the child sees it (the age preset or the Custom "credit score" option); when it is off the child sees an explanation, the AI never names a number, and locked cards say "needs a stronger credit record".
+- The parent's kids list shows the score and last month's change. A child's Monthly review has the number, the three parts, why it moved, a history chart and the next card it unlocks.
+
+### 6.1 Credit card numbers and rules *(Built)*
 
 Status: built (`models/credit.py`, `models/card.py`, `controllers/credit_controller.py`). A child on a
-credit card spends on the card; on Debit they spend their own balance. The score is still a
-placeholder number. The card numbers below are the ones in the app; they were first proposed so the
+credit card spends on the card; on Debit they spend their own balance. The card numbers below are the
+ones in the app; they were first proposed so the
 credit core had something concrete to
 build against. All values are starting points; tune them after a playtest.
 
@@ -171,10 +185,10 @@ Recommended: option 2. It stays honest and still lands the point.
   the new card, which must have a limit at least as high as what is owed. Debit needs a zero balance.
 - The Monthly review and the Plans page show interest at an example size (1,000 WC) when the child owes
   nothing, as recommended above (option 2).
-- Not built here: the score from behaviour and the "why it moved" reasons, a payday setting, and the parent's
-  allowed-card set (the add-child form stores one, but the Plans page does not read it yet).
+- Not built here: a payday setting, and the parent's allowed-card set (the add-child form stores one, but the
+  Plans page does not read it yet).
 
-**Build needs** (all built except the score):
+**Build needs** (all built):
 
 1. Simulated time first ("Skip a month" for parents; NEXT_STEPS.md step 4).
 2. A card record per child: card type, limit, APR, opened date.

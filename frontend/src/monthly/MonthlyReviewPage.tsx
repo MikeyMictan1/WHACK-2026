@@ -15,6 +15,7 @@ import {
 import { pct } from '../lib/format.ts'
 import { formatMoney, parseMoney } from '../lib/money.ts'
 import { PhoneTapButton } from '../nfc/PhoneTapButton.tsx'
+import { ScoreSection } from './ScoreSection.tsx'
 
 /**
  * /review: the child's card, the latest statement, and what to do about it.
@@ -61,6 +62,7 @@ export function MonthlyReviewPage() {
         {summary && (
           <>
             <CardSummary summary={summary} />
+            <ScoreSection summary={summary} />
 
             {summary.has_credit ? (
               <>

@@ -25,6 +25,7 @@ from app.core.database import SessionDep
 from app.models import negotiation as neg_model
 from app.models.card import Card, CreditProfile, allowed_ids, get_card, get_profile
 from app.models.negotiation import NegotiationSession
+from app.models.score import score_enabled
 from app.models.pricing import (
     blocked_reason,
     estimate_balance,
@@ -162,7 +163,7 @@ def start_negotiation(card_id: str, child: CurrentChild, db: SessionDep, bg: Bac
     card = get_card(db, card_id)
     if card is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Card not found")
-    reason = blocked_reason(profile, card, allowed_ids(profile))
+    reason = blocked_reason(profile, card, allowed_ids(profile), show_score=score_enabled(child.app_experience))
     if reason:
         raise HTTPException(status.HTTP_409_CONFLICT, reason)
 
@@ -210,6 +211,7 @@ def say(session_id: int, body: SayIn, child: CurrentChild, db: SessionDep, bg: B
         reply = seller_bot.claude_reply(
             profile, card, age=seller_bot.age_from_experience(child.app_experience), best_bp=neg.best_offer_bp, turns_left=turns_left,
             history=history, child_text=text, seen_offers_bp=seen, record=record,
+            show_score=score_enabled(child.app_experience),
         )
     except HTTPException:
         # No key, rate limit or API down: a scripted bot keeps the demo alive.
@@ -277,7 +279,7 @@ def confirm(session_id: int, body: ConfirmIn, child: CurrentChild, db: SessionDe
         bg.add_task(led_feedback.show_switched)
 
     db.refresh(profile)
-    return ConfirmOut(session=_out(db, neg, profile), plan=current_plan(profile, db))
+    return ConfirmOut(session=_out(db, neg, profile), plan=current_plan(profile, db, show_score=score_enabled(child.app_experience)))
 
 
 @router.post("/negotiations/{session_id}/confirm/cancel", status_code=status.HTTP_204_NO_CONTENT)

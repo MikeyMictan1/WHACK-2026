@@ -5,8 +5,8 @@
 
 Demo logins (play money only, local use):
     parent   demo_parent   whack-demo-1    has example rewards and chores, and sees both kids
-    child    demo_kid      1234            younger kid on the starter card (Whack Basic)
-    child    demo_teen     1234            older kid with a stronger record (can unlock Venture W)
+    child    demo_kid      1234            younger kid on the starter card (Whack Basic); credit score tracking off (13+)
+    child    demo_teen     1234            older kid with a stronger record (can unlock Venture W); credit score on
 Each kid starts with some money in their balance, so they can buy things and pay statements.
 Use the parent dashboard's "Skip a month" to issue statements.
 """
@@ -20,6 +20,7 @@ from app.core.security import hash_password
 from app.models.card import get_profile
 from app.models.led import ensure_skin_rewards
 from app.models.milestone import MilestoneInput, replace_milestones
+from app.models.score import history_points, total_score
 from app.models.shop import add_entry, add_starter_items
 from app.models.user import User, create_user, get_user_by_username
 from app.models.weekly_item import WeeklyItemInput, replace_weekly_items
@@ -37,7 +38,7 @@ CHILDREN = [
         "items": [("Ice cream", 300, 2), ("Extra screen time", 500, 1)],
         "milestones": [("New bike", 20000)],
         "start_money": 2000,  # 20.00 WC in their own balance
-        "profile": {},  # a fresh credit account: score 640, on Whack Basic, owing nothing
+        "profile": {},  # a fresh credit account: score 580 (Fair), on Whack Basic, owing nothing. Score tracking is off at 13+
     },
     {
         "username": "demo_teen",
@@ -49,8 +50,9 @@ CHILDREN = [
         "items": [("Cinema ticket", 800, 1), ("Snacks", 250, 3)],
         "milestones": [("Concert ticket", 12000), ("Headphones", 8000)],
         "start_money": 5000,
-        # A history from before the app: it only sets the placeholder score and the account's age.
-        "profile": {"score": 710, "on_time_streak": 6, "months_open": 9},
+        # A record from before the app: six good months of payments on a nine-month-old account (score 715).
+        # One more good month takes it past the 720 that Venture W needs. Score tracking is on at 15+.
+        "profile": {"on_time_streak": 6, "months_open": 9, "score_payment": 190},
     },
 ]
 
@@ -95,6 +97,8 @@ def _get_or_create_child(session: Session, parent: User, spec: dict) -> None:
     profile = get_profile(session, child.id)  # creates the credit account
     for field, value in spec["profile"].items():
         setattr(profile, field, value)
+    profile.score_history = history_points(profile.months_open)
+    profile.score = total_score(profile.score_payment, profile.score_utilisation, profile.score_history)
     session.add(profile)
     session.commit()
     print(f"  created  child  {spec['username']}  (password {spec['password']})")

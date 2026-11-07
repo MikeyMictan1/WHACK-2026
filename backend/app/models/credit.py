@@ -8,6 +8,7 @@ How it works
   month (`advance_month`): one month is 4 weeks, so that is also 4 weekly allowances.
 * Skipping a month closes the books: the previous statement's due date passes (paid in full, paid at least
   the minimum, or late), interest and any late fee are charged, and a new `Statement` is issued.
+* Each month's close also recalculates the credit score (models/score.py) and saves why it moved.
 * The child pays the open statement from their own balance (`pay_statement`).
 
 The rules, all from section 6.1:
@@ -22,12 +23,13 @@ Functions here never commit: the caller commits, so a purchase, a payment and th
 always succeed or fail together.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
 from sqlmodel import Field, Session, SQLModel, col, func, select
 
 from app.models.card import Card, CreditProfile
+from app.models.score import ScoreChange, init_score, update_for_month, utilisation_bp_of
 from app.models.shop import add_entry, balance_of
 from app.models.user import User
 
@@ -264,11 +266,17 @@ class MonthResult:
     interest: int  # interest charged on the new statement
     late_fee: int  # late fee charged for the previous statement
     statement: Statement | None  # the new one (None on Debit)
+    score_before: int = 0
+    score_after: int = 0
+    score_changes: list[ScoreChange] = field(default_factory=list)  # why the score moved this month
 
 
 def advance_month(session: Session, child: User, profile: CreditProfile) -> MonthResult:
     """Move the child's clock on one month: allowance, the due date, interest, fees, a new statement."""
     assert child.id is not None
+    if profile.score_payment < 0:  # get_profile does this; be safe for an account that skipped it
+        init_score(profile, utilisation_bp_of(profile.balance, profile.credit_limit))
+    score_before = profile.score
     prev = latest_statement(session, child.id)
 
     # 1. Four weeks of allowance.
@@ -355,11 +363,23 @@ def advance_month(session: Session, child: User, profile: CreditProfile) -> Mont
             session.add(entry)
         if purchases_total > 0:
             profile.monthly_spend = purchases_total
+
+    # 6. The credit score is recalculated each time a month closes, and the reasons are saved.
+    score_changes = update_for_month(
+        session,
+        profile,
+        outcome=outcome if evaluated is not None and evaluated.total > 0 else None,
+        previous_number=evaluated.number if evaluated is not None else None,
+        has_credit=is_credit(profile),
+        statement_total=statement.total if statement is not None else 0,
+        on_date=statement_date,
+    )
     session.add(profile)
 
     return MonthResult(
         sim_date=statement_date, allowance=allowance, previous=evaluated, outcome=outcome,
         interest=interest, late_fee=late_fee, statement=statement,
+        score_before=score_before, score_after=profile.score, score_changes=score_changes,
     )
 
 

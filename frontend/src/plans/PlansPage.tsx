@@ -72,16 +72,16 @@ export function PlansPage() {
 }
 
 function CurrentSummary({ plan }: { plan: CurrentPlan }) {
-  const rows = [
+  const rows: [string, string][] = [
     ['Your plan', plan.card_name],
     ['APR', pct(plan.apr_bp)],
     ['Limit', plan.credit_limit ? money(plan.credit_limit) : 'Your own money'],
     ['Balance', money(plan.balance)],
-    ['Credit score', String(plan.score)],
-  ] as const
+  ]
+  if (plan.score !== null) rows.push(['Credit score', String(plan.score)])
 
   return (
-    <dl className="grid grid-cols-2 border-t border-ink md:grid-cols-5">
+    <dl className={`grid grid-cols-2 border-t border-ink ${rows.length > 4 ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
       {rows.map(([term, value]) => (
         <div key={term} className="border-b border-ink/15 py-5 pr-4">
           <dt className="meta">{term}</dt>

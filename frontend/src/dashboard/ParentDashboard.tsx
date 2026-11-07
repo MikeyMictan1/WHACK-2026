@@ -182,7 +182,11 @@ function creditLine(c: ChildCredit): string {
     c.statement_number !== null && c.status === 'open' && (c.statement_remaining ?? 0) > 0
       ? `statement ${c.statement_number}: ${formatMoney(c.statement_remaining ?? 0)} due ${formatDate(c.due_date ?? c.sim_date)}`
       : 'nothing to pay'
-  return `${c.card_name} · owes ${formatMoney(c.owed)} · ${due} · their date ${formatDate(c.sim_date)}`
+  const score =
+    c.score !== null
+      ? ` · score ${c.score}${c.score_change ? ` (${c.score_change > 0 ? '+' : '−'}${Math.abs(c.score_change)})` : ''}`
+      : ''
+  return `${c.card_name} · owes ${formatMoney(c.owed)} · ${due}${score} · their date ${formatDate(c.sim_date)}`
 }
 
 /** What skipping a month did, in a sentence or two. */
@@ -196,5 +200,10 @@ function skipMessage(r: SkipResult): string {
   if (r.interest > 0) parts.push(`${formatMoney(r.interest)} interest`)
   if (r.late_fee > 0) parts.push(`${formatMoney(r.late_fee)} late fee`)
   if (r.statement) parts.push(`new statement ${r.statement.number}: ${formatMoney(r.statement.total)} due ${formatDate(r.statement.due_date)}`)
+  if (r.score_enabled && r.score_before !== null && r.score_after !== null) {
+    parts.push(
+      r.score_before === r.score_after ? `score stayed at ${r.score_after}` : `score ${r.score_before} to ${r.score_after}`,
+    )
+  }
   return parts.join(', ')
 }

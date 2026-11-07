@@ -52,7 +52,8 @@ SUGGESTIONS = ["What is APR?", "How do I raise my credit score?", "How does Chan
 @dataclass
 class ChildFacts:
     age: int | None
-    score: int
+    score: int | None  # None when the parent has switched credit score tracking off
+    score_reasons: list[str]  # why it moved last month, e.g. "+14 Statement 2 paid in full on time"
     plan_name: str
     apr_bp: int
     utilisation_pct: int
@@ -73,11 +74,20 @@ def suggest_topics(question: str, answer: str, limit: int = 2) -> list[str]:
 
 # ---- Claude helper -----------------------------------------------------------------------
 
+def _score_facts(facts: ChildFacts) -> str:
+    if facts.score is None:
+        return "their credit score tracking is switched off, so do not give them a score number; "
+    text = f"credit score {facts.score}"
+    if facts.score_reasons:
+        text += " (last month: " + "; ".join(facts.score_reasons) + ")"
+    return text + ", "
+
+
 def _system_prompt(*, age: int | None, page: str, facts: ChildFacts | None) -> str:
     band = age_band(age) if age else "10 to 18"
     where = PAGES.get(page)
     account = (
-        f"\nAbout this child's account (use it only when it helps answer): credit score {facts.score}, "
+        f"\nAbout this child's account (use it only when it helps answer): {_score_facts(facts)}"
         f"on the {facts.plan_name} plan at {pct(facts.apr_bp)} APR, using {facts.utilisation_pct}% of their limit, "
         f"{facts.on_time_streak} months paid on time in a row."
         if facts
@@ -107,6 +117,7 @@ a rate can go and never write the child's negotiation messages for them. You are
 - To switch plans, the child confirms by tapping their NFC card.
 - The Learn page (the Info pages link at the bottom of every page) has short lessons: What is credit, Credit score, \
 APR and interest, Statements, Utilisation, Choosing a card, Myth or fact, Glossary.
+- The credit score runs from 300 to 800 and is worked out from three things: payment history (the biggest part, 50%: paying statements on time builds it slowly and a late payment costs a lot), how much of the limit is used on statement day (30%: under 10% is best), and how long the account has been open (20%: full marks at 12 months). It is recalculated each time a statement is issued, and the app shows the reasons it moved. Some parents turn score tracking off for younger children; then there is no score to talk about, so say it is switched off and a parent can turn it on.
 - Interest in Whack is simplified. Real cards differ.
 
 Rules:

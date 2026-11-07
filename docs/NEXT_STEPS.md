@@ -3,7 +3,8 @@
 State as of the shop and chores work: parent and child accounts, shop (in-game, weekly,
 milestones), chores, parent approvals, bonuses, and the full purchase flow (request, approve,
 tap card or simulate, paid). The credit core is built too (cards, statements, paying, interest, late
-fees, cash back, "Skip a month"); see DESIGN.md section 6.1. The credit score is still a placeholder.
+fees, cash back, "Skip a month"); see DESIGN.md section 6.1. The credit score is built too (monthly, with the
+reasons it moved); see DESIGN.md section 6.
 
 ## 1. Do next (in order)
 
@@ -14,9 +15,9 @@ fees, cash back, "Skip a month"); see DESIGN.md section 6.1. The credit score is
 3. **Child setup options** on "Add child": weekly allowance, payday, starting credit limit, allowed
    cards. Store on a new `ChildSettings` table (new table, so no DB reset).
 4. **Simulated time** *(built: "Skip a month", 4 weeks, pays 4 weekly allowances; no payday setting yet)*.
-5. **Credit core** *(built except the score: card on the child, buying on credit, statements, paying them,
-   interest, late fees, cash back, one plan change a month)*. **Still to do: the score from behaviour, with
-   the reasons it moved.** See DESIGN.md sections 6 and 6.1.
+5. **Credit core** *(built: card on the child, buying on credit, statements, paying them, interest, late fees,
+   cash back, one plan change a month, and the credit score with the reasons it moved)*. See DESIGN.md
+   sections 6 and 6.1.
 6. **Hardware hooks** (section 2 below). Start with LED feedback for the purchase flow; it's small
    and makes the demo land.
 7. **AI:** weekly recap, then the negotiation bot.

@@ -144,7 +144,12 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
   (`advance_month`, `POST /api/credit/children/{id}/skip-month`) moves it: 4 weeks, 4 allowances, the due date
   passes, interest and any late fee, a new `Statement`. Statements are due 14 days after they are issued.
   This is separate from the admin's site clock (`models/clock.py`, `site_now()`), which the shop uses.
-- The seeded cards follow DESIGN.md 6.1 (`models/card.py`). The score is still a placeholder.
+- The seeded cards follow DESIGN.md 6.1 (`models/card.py`).
+- The credit score (`models/score.py`) is 300 + payment history (250) + credit used (150) + history (100). It is
+  recalculated only in `advance_month`, and every change is saved as a `ScoreEvent` with its reason. It is always
+  tracked, but only shown where the parent turned it on (`score_enabled`, mirroring the form's presets); the API
+  returns `score: null` otherwise, the AI helper and the sellers are told not to name a number, and locked-card
+  messages use neutral wording. Change the maths and `score_rules_test`-style checks need new numbers.
 - A child can change plan once a month (`switch_locked_reason`); Plans and the negotiation both check it.
 
 ## Change plan and negotiation
@@ -158,8 +163,8 @@ Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plan
   but Loan Shark punishes hard, 2.5 and 5 points; politeness takes a penalty back off 1 point a message). The bot (`core/seller_bot.py`) never sees the
   floor; it calls a `make_offer` tool and is told what was recorded. The UI shows the recorded offer.
 - `models/card.py` seeds the five cards and holds `CreditProfile`, the child's credit account (their card,
-  what they owe, their clock; created on first use through `get_profile`). Its `score` is still a placeholder
-  number until the score is calculated from behaviour.
+  what they owe, their clock, their score and its three parts; created on first use through `get_profile`, which
+  also sets up the score for older accounts).
 - If Claude is unreachable the scripted bot in `seller_bot.py` takes over so the demo still runs.
 - Each seller has a character: `PERSONAS` (Mia, Simon Smith, Priya, Linguini the Godfather-style loan shark),
   `OPENERS` and the offline `SCRIPTS` in `core/seller_bot.py`, keyed by card id. A new negotiable card needs an
