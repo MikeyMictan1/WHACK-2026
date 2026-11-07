@@ -5,7 +5,9 @@
     "dev": "concurrently -k -n backend,frontend -c magenta,cyan \"npm:dev:backend\" \"npm:dev:frontend\"",
     "dev:backend": "uv run --directory backend fastapi dev app/main.py --port 8000",
     "dev:frontend": "npm run dev --prefix frontend",
-    "setup": "npm install && npm install --prefix frontend && uv sync --directory backend"
+    "setup": "npm install && npm install --prefix frontend && uv sync --directory backend",
+    "seed": "uv run --directory backend python -m app.seed",
+    "seed:reset": "uv run --directory backend python -m app.seed --reset"
   },
   "devDependencies": {
     "concurrently": "^10.0.6"
