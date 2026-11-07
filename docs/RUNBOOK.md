@@ -107,6 +107,8 @@ One-time setup:
    - `JWT_SECRET`: a long random string (keep it stable: changing it logs everyone out and makes
      data saved on NFC cards unreadable)
    - `ANTHROPIC_API_KEY`: the Claude key
+   - `ADMIN_PASSWORD`: **must change.** The default (`admin-change-me`) is public in this repo, and
+     the admin can move the site clock and see every family. `ADMIN_USERNAME` too, if you like.
    - `ALLOW_SIMULATED_TAP=true` (no reader in the cloud yet, so the simulate button is the way to pay)
    - Already set by the Dockerfile: `DATABASE_URL`, `FRONTEND_DIST`, `COOKIE_SECURE=true`
 4. Service → Settings → Networking → **Generate Domain**. That's the public HTTPS link.
