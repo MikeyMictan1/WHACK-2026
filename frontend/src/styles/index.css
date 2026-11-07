@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+/*
+  Palette: white into light blue, ink for text,
+  acid lime as the single highlight (closing band, hover on primary actions).
+  Type: Outfit (as on ubiasCV) for everything, light at hero scale, regular/medium below it.
+        No second typeface: --font-mono points at Outfit too, so code paths match the page.
+  Shape: square corners everywhere, no shadows, no glass. Surfaces are solid
+  and separated by 1px rules. See ../../../vibe-code.md for what to avoid.
+*/
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Outfit", ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #0b1a2e;
+  --color-ink-2: #1d3050;
+  --color-muted: #5b6b80;
+  --color-line: #e2e8f0;
+
+  --color-paper: #fafbfc;
+  --color-white: #ffffff;
+  --color-sky: #e6f0fb;
+  --color-sky-2: #c9dcf0;
+  --color-blush: #fbe3ee;
+  --color-blush-2: #f6b8d1;
+
+  --color-signal: #d4ff3a;
+
+  --text-d1: 4.5rem;
+  --text-d1--line-height: 1;
+  --text-d1--letter-spacing: -0.035em;
+  --text-d2: 3rem;
+  --text-d2--line-height: 1.04;
+  --text-d2--letter-spacing: -0.03em;
+  --text-d3: 2rem;
+  --text-d3--line-height: 1.1;
+  --text-d3--letter-spacing: -0.02em;
+  --text-d4: 1.5rem;
+  --text-d4--line-height: 1.25;
+  --text-d4--letter-spacing: -0.015em;
+  --text-lead: 1.125rem;
+  --text-lead--line-height: 1.6;
+
+}
+
+@layer base {
+  html {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "tnum";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: var(--color-signal);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}
+
+@utility container-x {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1440px;
+  padding-inline: 1.25rem;
+  @media (width >= 48rem) {
+    padding-inline: 2.5rem;
+  }
+}
+
+@utility grid-12 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 1rem;
+  @media (width >= 48rem) {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 2rem;
+  }
+}
+
+@utility meta {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: var(--color-muted);
+}
+

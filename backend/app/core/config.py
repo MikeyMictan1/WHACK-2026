@@ -1,0 +1,28 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """App settings. Values come from environment variables or a .env file."""
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    app_name: str = "Whack Template API"
+    database_url: str = "sqlite:///./app.db"
+
+    jwt_secret: str = "dev-only-secret-change-me"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 24
+
+    cookie_name: str = "access_token"
+    cookie_secure: bool = False  # set True in production (HTTPS)
+
+    cors_origins: list[str] = ["http://localhost:5173"]
+
+    anthropic_api_key: str = ""  # set ANTHROPIC_API_KEY in .env
+
+    # Key for encrypting data saved on NFC cards. Falls back to jwt_secret.
+    # Changing it makes every existing card unreadable.
+    nfc_secret: str = ""
+
+
+settings = Settings()

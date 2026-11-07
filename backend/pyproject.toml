@@ -1,0 +1,19 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Whack template API (FastAPI, MVC)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.115",
+    "sqlmodel>=0.0.22",
+    "pyjwt>=2.9",
+    "pwdlib[argon2]>=0.2",
+    "pydantic-settings>=2.6",
+    "anthropic>=2.6.0",
+    "pyscard>=2.3.2",
+    "cryptography>=50.0.2",
+    "pyserial>=3.5",
+]
+
+[tool.uv]
+package = false

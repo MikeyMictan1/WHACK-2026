@@ -1,0 +1,11 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Shell scripts must keep LF endings or bash chokes on them
+*.sh text eol=lf
+/frontend-start text eol=lf
+/frontend-stop text eol=lf
+/backend-start text eol=lf
+/backend-stop text eol=lf
+/project-start text eol=lf
+/project-stop text eol=lf
