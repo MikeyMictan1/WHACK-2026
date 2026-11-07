@@ -21,13 +21,14 @@ import struct
 import time
 import zlib
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any, Literal
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from sqlmodel import Field, Session, SQLModel
 
+from app.models.clock import site_now
 from app.core.config import settings
 from app.core.nfc_card import NfcError, Tag
 
@@ -41,7 +42,7 @@ class Vault(SQLModel, table=True):
     data: str = "{}"  # JSON; empty while the data is on the card
     location: str = "system"
     card_save_id: str | None = None  # set while location == "card"
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: site_now())
 
 
 def _row(session: Session, user_id: int) -> Vault:
@@ -62,7 +63,7 @@ def set_vault(session: Session, user_id: int, data: dict[str, Any]) -> None:
     if row.location == "card":
         raise NfcError("Your data is on your NFC card. Log out and tap the card to bring it back first.")
     row.data = json.dumps(data, separators=(",", ":"))
-    row.updated_at = datetime.now(UTC)
+    row.updated_at = site_now()
     session.commit()
 
 
@@ -130,7 +131,7 @@ def move_to_card(session: Session, tag: Tag, user_id: int) -> int:
     tag.write(blob)  # verifies by reading back; raises if anything went wrong
 
     row.data, row.location, row.card_save_id = "{}", "card", save.save_id
-    row.updated_at = datetime.now(UTC)
+    row.updated_at = site_now()
     session.commit()
     return len(blob)
 
@@ -146,7 +147,7 @@ def move_from_card(session: Session, tag: Tag) -> int:
 
     row = _row(session, save.user_id)
     row.data, row.location, row.card_save_id = json.dumps(save.data, separators=(",", ":")), "system", None
-    row.updated_at = datetime.now(UTC)
+    row.updated_at = site_now()
     session.commit()
     try:
         wipe_card(tag)

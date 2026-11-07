@@ -1,4 +1,5 @@
-export type Role = 'parent' | 'child'
+/** 'admin' is the single built-in account the backend seeds at startup; it can't be registered. */
+export type Role = 'parent' | 'child' | 'admin'
 
 export type User = {
   id: number

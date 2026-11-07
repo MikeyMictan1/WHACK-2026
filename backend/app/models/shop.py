@@ -14,6 +14,8 @@ from typing import Literal
 
 from sqlmodel import Field, Session, SQLModel, col, func, select
 
+from app.models.clock import site_now
+
 RewardKind = Literal["in_game", "weekly", "milestone", "led_skin"]
 ChoreKind = Literal["chore", "extracurricular"]
 EntryKind = Literal["chore", "purchase", "bonus", "allowance"]
@@ -24,8 +26,8 @@ OPEN_STATUSES = ("pending", "approved")
 
 
 def utcnow() -> datetime:
-    # Timezone-aware: SQLModel refuses naive datetimes and gives aware ones back.
-    return datetime.now(UTC)
+    """The site clock's now (UTC, timezone-aware), not the real time. See models/clock.py."""
+    return site_now()
 
 
 # ---- Tables ------------------------------------------------------------------

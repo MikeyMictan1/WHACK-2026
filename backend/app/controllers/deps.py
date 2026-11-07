@@ -51,3 +51,12 @@ def get_current_child(user: CurrentUser) -> User:
 
 
 CurrentChild = Annotated[User, Depends(get_current_child)]
+
+
+def get_current_admin(user: CurrentUser) -> User:
+    if user.role != "admin":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the admin can do this")
+    return user
+
+
+CurrentAdmin = Annotated[User, Depends(get_current_admin)]

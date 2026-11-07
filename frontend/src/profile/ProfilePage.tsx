@@ -32,7 +32,10 @@ export function ProfilePage() {
 
   const rows = [
     ['Username', user.username],
-    ['Account type', user.role === 'parent' ? 'Parent' : 'Child (managed by your parent)'],
+    [
+      'Account type',
+      user.role === 'admin' ? 'Admin (built in)' : user.role === 'parent' ? 'Parent' : 'Child (managed by your parent)',
+    ],
     ['Member since', new Date(user.created_at).toLocaleDateString(undefined, { dateStyle: 'long' })],
     ['User ID', String(user.id)],
   ] as const

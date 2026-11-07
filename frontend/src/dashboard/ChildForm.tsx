@@ -5,6 +5,7 @@ import { TextField } from '../components/ui/TextField.tsx'
 import {
   APP_EXPERIENCE_PRESETS,
   CARD_TYPE_OPTIONS,
+  PRESET_SETTINGS,
   type Child,
   type ChildInput,
   type ChildUpdate,
@@ -28,15 +29,34 @@ function initialExperienceChoice(child: Child | null) {
   return PRESETS.includes(child.app_experience) ? child.app_experience : CUSTOM
 }
 
+function isPreset(choice: string): choice is keyof typeof PRESET_SETTINGS {
+  return choice in PRESET_SETTINGS
+}
+
+const CARD_LABEL = new Map<string, string>(CARD_TYPE_OPTIONS.map((c) => [c.value, c.label]))
+
+/** "Credit score off · DeerDebit, CaliccoCredit" for the selected preset. */
+function presetSummary(choice: keyof typeof PRESET_SETTINGS) {
+  const { creditScore, cardTypes } = PRESET_SETTINGS[choice]
+  return `Credit score ${creditScore ? 'on' : 'off'} · ${cardTypes.map((c) => CARD_LABEL.get(c)).join(', ')}`
+}
+
 /** Add a child, or edit one (name, allowance, card type, app experience, optional password reset). */
 export function ChildForm(props: Props) {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const child = props.mode === 'edit' ? props.child : null
   const [experienceChoice, setExperienceChoice] = useState(initialExperienceChoice(child))
-  const [customChecked, setCustomChecked] = useState<Set<string>>(new Set())
+  // Custom's own picks. Presets don't touch these, so switching back to Custom keeps them.
+  const [customChecked, setCustomChecked] = useState<Set<string>>(
+    new Set(
+      initialExperienceChoice(child) === CUSTOM
+        ? (child?.app_experience ?? '').split(',').filter((k) => CUSTOM_OPTIONS.some((o) => o.key === k))
+        : [],
+    ),
+  )
   const [selectedCardTypes, setSelectedCardTypes] = useState<Set<string>>(
-    new Set(child?.card_type ? child.card_type.split(',') : []),
+    new Set(initialExperienceChoice(child) === CUSTOM && child?.card_type ? child.card_type.split(',') : []),
   )
   const [items, setItems] = useState<ItemDraft[]>(() => toDrafts(child?.weekly_items ?? []))
   const [milestones, setMilestones] = useState<ItemDraft[]>(() => toDrafts(child?.milestones ?? []))
@@ -79,6 +99,10 @@ export function ChildForm(props: Props) {
     if (experienceChoice === CUSTOM && selectedCardTypes.size === 0) {
       return setError('Select at least one card type')
     }
+    // Presets send their own card types, as if the parent had picked exactly those.
+    const card_type = isPreset(experienceChoice)
+      ? PRESET_SETTINGS[experienceChoice].cardTypes.join(',')
+      : [...selectedCardTypes].join(',')
     if ((props.mode === 'create' || password) && password.length < 4) {
       return setError('Password must be at least 4 characters')
     }
@@ -101,7 +125,7 @@ export function ChildForm(props: Props) {
           display_name,
           weekly_allowance,
           app_experience,
-          card_type: [...selectedCardTypes].join(','),
+          card_type,
           weekly_items,
           milestones: milestone_list,
         })
@@ -116,7 +140,7 @@ export function ChildForm(props: Props) {
           display_name,
           weekly_allowance,
           app_experience,
-          card_type: [...selectedCardTypes].join(','),
+          card_type,
           weekly_items,
           milestones: milestone_list,
           ...(password ? { password } : {}),
@@ -218,6 +242,7 @@ export function ChildForm(props: Props) {
               </label>
             ))}
           </div>
+          {isPreset(experienceChoice) && <p className="meta">{presetSummary(experienceChoice)}</p>}
           {experienceChoice === CUSTOM && (
             <div className="flex flex-col gap-3">
               <div className="divide-y divide-ink/10 border border-ink/20">

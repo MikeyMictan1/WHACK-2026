@@ -5,10 +5,12 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.controllers import (
+    admin_controller,
     auth_controller,
     children_controller,
     chores_controller,
     ai_controller,
+    clock_controller,
     health_controller,
     led_controller,
     negotiation_controller,
@@ -45,9 +47,11 @@ api = APIRouter(prefix="/api")
 for controller in (
     health_controller,
     auth_controller,
+    admin_controller,
     children_controller,
     chores_controller,
     ai_controller,
+    clock_controller,
     led_controller,
     plans_controller,
     negotiation_controller,

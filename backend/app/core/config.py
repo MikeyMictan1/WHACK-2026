@@ -20,6 +20,11 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str = ""  # set ANTHROPIC_API_KEY in .env
 
+    # The built-in admin account. It can't be registered or deleted; startup recreates it if
+    # it's missing and resets its role and password to these values.
+    admin_username: str = "admin"
+    admin_password: str = "admin-change-me"
+
     # Lets "Simulate tap" stand in for a real NFC tap (shop purchases, plan switches). Off for a real deployment.
     allow_simulated_tap: bool = True
 

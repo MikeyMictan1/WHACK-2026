@@ -86,6 +86,15 @@ AI. The old paths redirect.
 - **Accounts:** one `user` table with `role` = `parent` | `child`. `/auth/register` only creates
   parents; children are created by their parent via `/api/children` (`parent_id` set) and log in
   on the normal login page. Use `CurrentParent` for parent-only endpoints.
+- **Admin:** a third role, `admin`, is one built-in account (`ADMIN_USERNAME`/`ADMIN_PASSWORD`,
+  default `admin` / `admin-change-me`). Nothing can register it; `init_db()` calls `ensure_admin()` on
+  every start, which recreates it if missing and resets its role and password. A `before_delete` hook
+  on `User` refuses to delete it. Use `CurrentAdmin` for admin-only endpoints.
+- **Site clock** (`models/clock.py`, `/api/clock`): the site's own "now" = real time + whatever the
+  admin added (a day, week or calendar month; reset drops the additions). **The whole site runs on it:**
+  never call `datetime.now()` in app code, use `site_now()` (or `shop.utcnow()`, which wraps it). The
+  only real-time clocks are security ones: JWT expiry (`core/security.py`) and the NFC card save stamp.
+  The LED clock/date skins add `site_offset()` to local time.
 - **Play money** (`models/shop.py`, `shop_controller`, `chores_controller`): amounts are integer
   pence; balance = sum of `LedgerEntry` rows (never store a balance column). Purchase requests go
   `pending -> approved -> paid`; `/shop/requests/{id}/pay` blocks up to 30 s waiting for a tap on
