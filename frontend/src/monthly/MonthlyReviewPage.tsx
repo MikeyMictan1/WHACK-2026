@@ -16,10 +16,11 @@ import { pct } from '../lib/format.ts'
 import { formatMoney, parseMoney } from '../lib/money.ts'
 import { PhoneTapButton } from '../nfc/PhoneTapButton.tsx'
 import { ScoreSection } from './ScoreSection.tsx'
+import { StorySection } from './StorySection.tsx'
 
 /**
- * /review: the child's card, the latest statement, and what to do about it.
- * The "Change plan?" button is always here. (The AI story of the month, DESIGN.md section 9, will go above.)
+ * /review: the story of the month, the child's card, the latest statement, and what to do about it.
+ * The "Change plan?" button is always here.
  */
 export function MonthlyReviewPage() {
   const [summary, setSummary] = useState<CreditSummary | null>(null)
@@ -61,6 +62,7 @@ export function MonthlyReviewPage() {
 
         {summary && (
           <>
+            <StorySection refreshKey={`${summary.statement?.number ?? 0}-${summary.statement?.status ?? ''}`} />
             <CardSummary summary={summary} />
             <ScoreSection summary={summary} />
 

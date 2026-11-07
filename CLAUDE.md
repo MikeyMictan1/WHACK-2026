@@ -169,6 +169,14 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
   `PUT /api/decor` saves the whole layout (owned only, once each, 4 per side). `GET /api/decor/spending` feeds the Home chart
   (reuses `models/breakdown.spending_breakdown`). Frontend: `decor/` (page, panel, tile); no art exists, tiles show the item's initial.
 
+## Monthly wrap (child's AI summary)
+
+- `GET /api/story` (`story_controller`, `core/story_bot.py`) writes the story for the child's latest statement on first ask and
+  saves it as `MonthlyStory` (one per statement number and status, so paying earns a fresh one). `POST /api/story/retry` swaps a
+  built-in story for an AI one. Same rules as the parent recap: facts built in code, unknown numbers rejected, scripted fallback,
+  no names. If the child's score tracking is off the facts omit the score and any draft mentioning "score" is rejected.
+  Shown by `monthly/StorySection.tsx` at the top of `/review`.
+
 ## Change plan and negotiation
 
 Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plans_controller`) ->

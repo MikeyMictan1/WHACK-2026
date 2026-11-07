@@ -5,6 +5,7 @@ from app.models.clock import SiteClock
 from app.models.credit import CreditEntry, Statement
 from app.models.decor import DecorPlacement
 from app.models.score import ScoreEvent
+from app.models.story import MonthlyStory
 from app.models.help import HelpMessage
 from app.models.led import LedEquip, RewardSkin
 from app.models.milestone import Milestone
@@ -50,6 +51,7 @@ __all__ = [
     "PushSubscription",
     "Reward",
     "DecorPlacement",
+    "MonthlyStory",
     "Recap",
     "ScoreEvent",
     "RewardSkin",

@@ -57,7 +57,7 @@ Matches the designer's mocks.
    - Weekly (small items)
    - Milestones (parent-set goals)
 3. **Earn money:** chores and extracurriculars the parent has added. Kid marks done, parent approves.
-4. **Monthly review:** AI summary, new credit score, updated plan (interest, limit), "Change plan?".
+4. **Monthly review** *(AI summary built)*: AI summary, new credit score, updated plan (interest, limit), "Change plan?".
 5. **Change plan:** lists cards the parent allows, with a "Negotiate?" button leading to the AI chat.
 6. **Decor** *(built, `/decor`)*: owned in-game items placed in the left and right panels (4 per side; pick an item,
    then a side).
