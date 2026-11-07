@@ -25,7 +25,13 @@ from app.core.database import SessionDep
 from app.models import negotiation as neg_model
 from app.models.card import Card, CreditProfile, allowed_ids, get_card, get_profile
 from app.models.negotiation import NegotiationSession
-from app.models.pricing import blocked_reason, floor_apr_bp, twelve_month_cost
+from app.models.pricing import (
+    blocked_reason,
+    estimate_balance,
+    estimate_is_example,
+    floor_apr_bp,
+    twelve_month_cost,
+)
 
 router = APIRouter(tags=["negotiation"])
 
@@ -65,6 +71,8 @@ class SessionOut(BaseModel):
     max_turns: int
     scripted: bool
     messages: list[MessageOut]
+    estimate_balance: int = 0  # the balance the year-ahead figures use
+    estimate_is_example: bool = False  # True when the child owes nothing, so an example size is used
     before: CostLine | None = None  # filled once an offer is accepted
     after: CostLine | None = None
     coach_note: str | None = None
@@ -136,6 +144,8 @@ def _out(db: SessionDep, neg: NegotiationSession, profile: CreditProfile) -> Ses
             MessageOut(id=m.id or 0, role=m.role, text=m.text, offer_apr_bp=m.offer_apr_bp)
             for m in neg_model.messages_of(db, neg.id or 0)
         ],
+        estimate_balance=estimate_balance(profile),
+        estimate_is_example=estimate_is_example(profile),
         before=before,
         after=after,
         coach_note=neg.coach_note,

@@ -133,9 +133,9 @@ export const SCORE_EVENTS = [
 // ---- APR and interest -------------------------------------------------------------------
 
 export const INTEREST_ROWS = [
-  { name: 'Low rate', apr: 5 },
-  { name: 'Typical card', apr: 25 },
-  { name: 'Loan Shark', apr: 40 },
+  { name: 'Low rate', apr: 10 },
+  { name: 'Typical card', apr: 20 },
+  { name: 'Loan Shark', apr: 90 },
 ]
 
 // ---- Statements ----------------------------------------------------------------------------
@@ -166,14 +166,14 @@ export const UTILISATION_BANDS = [
 
 // ---- Choosing a card ----------------------------------------------------------------------------
 
-/** Made-up examples: carry 50 WC for a year and spend 20 WC a month. */
+/** The app's real card rates, in a simple example: carry 50 WC for a year and spend 10 WC a month. */
 export const CARD_EXAMPLES = [
-  { name: 'Whack Basic', apr: 24.99, cashBack: 0 },
-  { name: 'Venture W', apr: 17.99, cashBack: 2 },
-  { name: 'Loan Shark', apr: 39.99, cashBack: 0 },
+  { name: 'Whack Basic', apr: 20, cashBack: 0 },
+  { name: 'Venture W', apr: 10, cashBack: 3 },
+  { name: 'Loan Shark', apr: 90, cashBack: 0 },
 ]
 export const CARD_BALANCE = 50
-export const CARD_MONTHLY_SPEND = 20
+export const CARD_MONTHLY_SPEND = 10
 
 // ---- Myth or fact ---------------------------------------------------------------------------------
 

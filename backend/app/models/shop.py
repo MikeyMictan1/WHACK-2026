@@ -16,7 +16,7 @@ from sqlmodel import Field, Session, SQLModel, col, func, select
 
 RewardKind = Literal["in_game", "weekly", "milestone", "led_skin"]
 ChoreKind = Literal["chore", "extracurricular"]
-EntryKind = Literal["chore", "purchase", "bonus", "allowance"]
+EntryKind = Literal["chore", "purchase", "bonus", "allowance", "card_payment", "cash_back"]
 
 REQUEST_TTL = timedelta(minutes=15)  # pending/approved requests expire after this
 WEEKLY_COOLDOWN = timedelta(days=7)
@@ -73,6 +73,7 @@ class PurchaseRequest(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
     decided_at: datetime | None = None
     paid_at: datetime | None = None
+    paid_with: str | None = None  # "credit" (charged to their card) | "balance" (their own money)
 
 
 class LedgerEntry(SQLModel, table=True):
@@ -152,6 +153,7 @@ class PurchaseRequestPublic(SQLModel):
     status: str
     created_at: datetime
     expires_in_seconds: int | None  # for pending/approved
+    paid_with: str | None = None
 
 
 class LedgerEntryPublic(SQLModel):
@@ -164,6 +166,10 @@ class LedgerEntryPublic(SQLModel):
 
 class Wallet(SQLModel):
     balance: int
+    # What a purchase comes out of: their card's available credit, or (on Debit) their own balance.
+    spend_from: str = "balance"  # "credit" | "balance"
+    spendable: int = 0
+    card_name: str = ""
     entries: list[LedgerEntryPublic]
     owned: list[PurchaseRequestPublic]
     card_linked: bool

@@ -119,6 +119,21 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
 `nfc_controller.nfc_events` (FastAPI `StreamingResponse`) and read it with `fetch` streaming or
 `EventSource` on the frontend. Use the claude-api skill for model IDs and API details.
 
+## Credit core
+
+`models/credit.py` holds the rules and `controllers/credit_controller.py` the API (docs/DESIGN.md 6.1).
+
+- A child on a credit card spends on the card: `shop_controller.pay` calls `charge_purchase` instead of taking
+  money from the ledger, and declines over the limit. On Debit it still takes the child's own balance.
+- `CreditProfile.balance` (what is owed) changes only through `credit.post_entry`, together with a
+  `CreditEntry`. Never edit it directly. Functions in `models/credit.py` never commit; the caller does, so a
+  purchase or payment and its ledger entries succeed or fail together.
+- Each child has their own clock (`CreditProfile.sim_now`). Only the parent's "Skip a month"
+  (`advance_month`, `POST /api/credit/children/{id}/skip-month`) moves it: 4 weeks, 4 allowances, the due date
+  passes, interest and any late fee, a new `Statement`. Statements are due 14 days after they are issued.
+- The seeded cards follow DESIGN.md 6.1 (`models/card.py`). The score is still a placeholder.
+- A child can change plan once a month (`switch_locked_reason`); Plans and the negotiation both check it.
+
 ## Change plan and negotiation
 
 Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plans_controller`) ->
@@ -126,15 +141,16 @@ Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plan
 -> plan switched. Money is integer hundredths of a Whack Coin (WC, play money; shown as "40.00 WC"; format with `formatMoney`/`money()`, both driven by `CURRENCY` in `frontend/src/lib/money.ts`), APR is integer basis points (2499 = 24.99%).
 
 - Numbers are the backend's: `models/pricing.py` computes the floor APR from score, payment streak and
-  utilisation, and `clamp_offer` limits every bot offer (down to the floor in steps; up by 1 point per rude message, at most 3 points over the listed APR). The bot (`core/seller_bot.py`) never sees the
+  utilisation, and `clamp_offer` limits every bot offer (down to the floor in steps; up per rude message by the card's `penalty_step_bp`, at most `max_penalty_bp` over the listed APR: 1 and 3 points,
+  but Loan Shark punishes hard, 2.5 and 5 points; politeness takes a penalty back off 1 point a message). The bot (`core/seller_bot.py`) never sees the
   floor; it calls a `make_offer` tool and is told what was recorded. The UI shows the recorded offer.
-- `models/card.py` seeds the five cards and holds `CreditProfile`, a stand-in for the child's score,
-  balance and current plan (created with demo values on first use). Replace `get_profile` when the real
-  score and statements exist.
+- `models/card.py` seeds the five cards and holds `CreditProfile`, the child's credit account (their card,
+  what they owe, their clock; created on first use through `get_profile`). Its `score` is still a placeholder
+  number until the score is calculated from behaviour.
 - If Claude is unreachable the scripted bot in `seller_bot.py` takes over so the demo still runs.
 - Each seller has a character: `PERSONAS` (Mia, Simon Smith, Priya, Linguini the Godfather-style loan shark),
   `OPENERS` and the offline `SCRIPTS` in `core/seller_bot.py`, keyed by card id. A new negotiable card needs an
-  entry in all three. Characters change wording only; the floor, the 1-point rude penalty and each card's maximum
+  entry in all three. Characters change wording only; the floor, the card's rude penalty and each card's maximum
   discount stay backend rules. Linguini never threatens or shames the child and never states a false number.
   Seller names live in `Card.seller` (`models/card.py`); `list_cards` copies the seed over existing rows.
 - `core/led_feedback.py` fills a bar on the LED grid as the discount grows; it is best effort.

@@ -1,6 +1,7 @@
 """Models: database tables, request/response schemas and data-access helpers."""
 
 from app.models.card import Card, CreditProfile
+from app.models.credit import CreditEntry, Statement
 from app.models.help import HelpMessage
 from app.models.led import LedEquip, RewardSkin
 from app.models.negotiation import NegotiationMessage, NegotiationSession
@@ -17,6 +18,7 @@ __all__ = [
     "ChildUpdate",
     "Chore",
     "ChoreClaim",
+    "CreditEntry",
     "CreditProfile",
     "HelpMessage",
     "LedEquip",
@@ -27,6 +29,7 @@ __all__ = [
     "PurchaseRequest",
     "Reward",
     "RewardSkin",
+    "Statement",
     "User",
     "UserCreate",
     "UserLogin",

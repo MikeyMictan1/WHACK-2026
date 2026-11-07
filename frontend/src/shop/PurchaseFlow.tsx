@@ -107,7 +107,14 @@ export function PurchaseFlow({ request, onClose, onChange }: Props) {
       title: tapError ? 'That didn’t work' : 'Tap your card',
       body: 'Approved. Hold your card on the reader to pay. If it is already there, lift it and tap again.',
     },
-    paid: { step: 'Done', title: 'Bought.', body: `${req.title} is yours. ${formatMoney(req.price)} came out of your balance.` },
+    paid: {
+      step: 'Done',
+      title: 'Bought.',
+      body:
+        req.paid_with === 'credit'
+          ? `${req.title} is yours. ${formatMoney(req.price)} was charged to your card and will be on your next statement.`
+          : `${req.title} is yours. ${formatMoney(req.price)} came out of your balance.`,
+    },
     denied: { step: 'Not this time', title: 'Your parent said no', body: 'Nothing was paid. Maybe try something else.' },
     cancelled: { step: 'Cancelled', title: 'Purchase cancelled', body: 'Nothing was paid.' },
     expired: { step: 'Timed out', title: 'This request expired', body: 'Nothing was paid. You can ask again.' },

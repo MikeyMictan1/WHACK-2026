@@ -3,15 +3,18 @@ import { nameOf, type User } from '../auth/types.ts'
 import { PageHeader } from '../components/layout/PageHeader.tsx'
 import { ButtonLink } from '../components/ui/Button.tsx'
 import { Skeleton } from '../components/ui/Skeleton.tsx'
+import { creditApi, formatDate, type CreditSummary } from '../credit/creditApi.ts'
 import { formatMoney } from '../lib/money.ts'
 import { shopApi, type Wallet } from '../shop/shopApi.ts'
 
-/** The child's home: balance, ways to spend and earn, recent transactions. Credit comes later. */
+/** The child's home: balance, their card, ways to spend and earn, recent transactions. */
 export function ChildDashboard({ child }: { child: User }) {
   const [wallet, setWallet] = useState<Wallet | null>(null)
+  const [credit, setCredit] = useState<CreditSummary | null>(null)
 
   useEffect(() => {
     shopApi.wallet().then(setWallet).catch(() => {})
+    creditApi.get().then(setCredit).catch(() => {})
   }, [])
 
   return (
@@ -35,6 +38,8 @@ export function ChildDashboard({ child }: { child: User }) {
             </ButtonLink>
           </div>
         </div>
+
+        {credit && <CardGlance credit={credit} />}
 
         <h2 className="mt-14 border-b border-ink pb-3 text-d3 font-light">Recent transactions</h2>
         {!wallet && <Skeleton className="mt-4 h-14 w-full" />}
@@ -66,5 +71,33 @@ export function ChildDashboard({ child }: { child: User }) {
         </div>
       </section>
     </>
+  )
+}
+
+/** The child's card on the home page: what is left to spend and when the next payment is due. */
+function CardGlance({ credit }: { credit: CreditSummary }) {
+  const st = credit.statement
+  const nextPayment = st && credit.can_pay ? `${formatMoney(st.remaining)} by ${formatDate(st.due_date)}` : 'Nothing due'
+  const rows = credit.has_credit
+    ? ([
+        ['Your card', credit.card.name],
+        ['Credit left', `${formatMoney(credit.available)} of ${formatMoney(credit.limit)}`],
+        ['You owe', formatMoney(credit.owed)],
+        ['Next payment', nextPayment],
+      ] as const)
+    : ([
+        ['Your card', credit.card.name],
+        ['How it works', 'You spend your own money'],
+      ] as const)
+
+  return (
+    <dl className="mt-10 grid grid-cols-2 border-t border-ink md:grid-cols-4">
+      {rows.map(([term, value]) => (
+        <div key={term} className="border-b border-ink/15 py-5 pr-4">
+          <dt className="meta">{term}</dt>
+          <dd className="mt-1 text-d4">{value}</dd>
+        </div>
+      ))}
+    </dl>
   )
 }
