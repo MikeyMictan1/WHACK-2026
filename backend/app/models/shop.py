@@ -9,7 +9,7 @@ Purchase flow (PurchaseRequest.status):
     denied | cancelled | expired  (end states)
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Literal
 
 from sqlmodel import Field, Session, SQLModel, col, func, select
