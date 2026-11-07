@@ -70,7 +70,7 @@ CARD_SEED: list[Card] = [
     Card(
         id="loan_shark", name="Loan Shark", tier=4, pitch="Instant approval, no questions. Look at the interest.",
         listed_apr_bp=3999, max_discount_bp=100, credit_limit=15_000, min_score=300, rewards_bp=0,
-        late_fee=3_500, seller="Vinny from Loan Shark",
+        late_fee=3_500, seller="Linguini from Loan Shark",
     ),
 ]
 
@@ -85,7 +85,7 @@ def list_cards(session: Session) -> list[Card]:
     for seed in CARD_SEED:
         row = rows.get(seed.id)
         if row is None:
-            session.add(seed.model_copy())
+            session.add(Card(**seed.model_dump()))  # a new object: never attach the shared seed to a session
             changed = True
             continue
         for field, value in seed.model_dump().items():

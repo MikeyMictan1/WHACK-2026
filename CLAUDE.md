@@ -132,6 +132,11 @@ Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plan
   balance and current plan (created with demo values on first use). Replace `get_profile` when the real
   score and statements exist.
 - If Claude is unreachable the scripted bot in `seller_bot.py` takes over so the demo still runs.
+- Each seller has a character: `PERSONAS` (Mia, Simon Smith, Priya, Linguini the Godfather-style loan shark),
+  `OPENERS` and the offline `SCRIPTS` in `core/seller_bot.py`, keyed by card id. A new negotiable card needs an
+  entry in all three. Characters change wording only; the floor, the 1-point rude penalty and each card's maximum
+  discount stay backend rules. Linguini never threatens or shames the child and never states a false number.
+  Seller names live in `Card.seller` (`models/card.py`); `list_cards` copies the seed over existing rows.
 - `core/led_feedback.py` fills a bar on the LED grid as the discount grows; it is best effort.
   It goes through `core/led_overlay.py` (shown for a few seconds, then the equipped skin returns).
   **Never write to `unicorn` directly**: the LED Home display loop owns the board and would
