@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, status
 from sqlmodel import Session, col, select
 
 from app.controllers.deps import CurrentParent, CurrentUser
-from app.controllers.nfc_controller import hub
+from app.controllers.nfc_controller import require_own_card, wait_for_card_tap
 from app.core.config import settings
 from app.core.database import SessionDep
 from app.models.shop import (
@@ -266,18 +266,6 @@ _pending_taps: dict[int, threading.Event] = {}  # request id -> cancel flag
 _taps_lock = threading.Lock()
 
 
-def _check_card(session: Session, child_id: int, uid: str) -> None:
-    """The card must be this child's. A child's first card, if unused, is linked to them."""
-    link = session.get(CardLink, uid)
-    if link is not None:
-        if link.child_id != child_id:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "That card belongs to someone else")
-        return
-    if session.exec(select(CardLink).where(CardLink.child_id == child_id)).first():
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "That isn't your card. Tap the card you paid with before.")
-    session.add(CardLink(uid=uid, child_id=child_id))
-
-
 @router.post("/requests/{request_id}/pay", response_model=PurchaseRequestPublic)
 def pay(request_id: int, user: CurrentUser, session: SessionDep, simulate: bool = False) -> PurchaseRequestPublic:
     """Wait (up to 30 s) for the child to tap their card on the reader, then take the money.
@@ -294,22 +282,18 @@ def pay(request_id: int, user: CurrentUser, session: SessionDep, simulate: bool 
         if not settings.allow_simulated_tap:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Simulated taps are turned off")
     else:
-        if hub.reader_name is None:
-            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "No card reader connected. Use Simulate tap.")
         cancel_flag = threading.Event()
         with _taps_lock:
             if old := _pending_taps.get(request_id):
                 old.set()
             _pending_taps[request_id] = cancel_flag
         try:
-            seq = hub.wait_for_tap(hub.tap_seq, cancel_flag, TAP_TIMEOUT_SECONDS)
+            uid = wait_for_card_tap(cancel_flag, TAP_TIMEOUT_SECONDS)
         finally:
             with _taps_lock:
                 if _pending_taps.get(request_id) is cancel_flag:
                     del _pending_taps[request_id]
-        if seq is None or hub.current_uid is None:
-            raise HTTPException(status.HTTP_408_REQUEST_TIMEOUT, "No card tapped. Try again.")
-        _check_card(session, child.id, hub.current_uid)
+        require_own_card(session, child.id, uid)
 
     session.refresh(req)  # the parent could have changed it while we waited
     if req.status != "approved":

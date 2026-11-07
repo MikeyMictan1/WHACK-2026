@@ -62,13 +62,17 @@ export function ProfilePage() {
           <Button onClick={onLogout} disabled={pending}>
             {pending ? 'Logging out…' : 'Log out'}
           </Button>
-          <Button variant="light" onClick={() => setNfcLogout(true)} disabled={pending} className="border border-ink">
-            Log out with NFC
-          </Button>
+          {user.role === 'child' && (
+            <Button variant="light" onClick={() => setNfcLogout(true)} disabled={pending} className="border border-ink">
+              Log out with NFC
+            </Button>
+          )}
         </div>
-        <p className="meta mt-3">
-          “Log out” keeps your data on our system. “Log out with NFC” moves it onto your card and removes it from ours.
-        </p>
+        {user.role === 'child' && (
+          <p className="meta mt-3">
+            “Log out” keeps your data on our system. “Log out with NFC” moves it onto your card and removes it from ours.
+          </p>
+        )}
 
         {nfcLogout && <NfcLogoutScreen onDone={onNfcLogoutDone} onBack={() => setNfcLogout(false)} />}
       </section>

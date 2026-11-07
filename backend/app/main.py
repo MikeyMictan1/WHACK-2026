@@ -1,8 +1,10 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from app.controllers import (
     admin_controller,
@@ -64,3 +66,20 @@ for controller in (
     api.include_router(controller.router)
 
 app.include_router(api)
+
+
+# ---- built frontend (deployment) ---------------------------------------------
+# In production one server serves both the API and the React build, so the browser sees a single
+# origin and the auth cookie needs no cross-site setup. Locally Vite serves the frontend instead;
+# this only kicks in when FRONTEND_DIST points at a build that exists.
+_dist = Path(settings.frontend_dist).resolve() if settings.frontend_dist else None
+if _dist is not None and (_dist / "index.html").is_file():
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def frontend(path: str) -> FileResponse:
+        if path == "api" or path.startswith("api/"):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found")
+        file = (_dist / path).resolve()
+        if path and file.is_file() and file.is_relative_to(_dist):
+            return FileResponse(file)
+        return FileResponse(_dist / "index.html")  # React Router handles every other path

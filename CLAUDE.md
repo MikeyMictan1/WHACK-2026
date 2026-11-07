@@ -163,10 +163,17 @@ Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plan
 (NTAG21x, Ultralight, MIFARE Classic 1K); all access must hold `card_lock` because a background
 poller shares the reader. `controllers/nfc_controller.py` runs that poller (started in
 `main.lifespan`) and pushes `hello`/`reader`/`card`/`card_removed` events over SSE at
-`/api/nfc/events`; `frontend/src/nfc/useNfc.ts` consumes them. "Log out with NFC" moves the user's
-vault (`models/vault.py`) onto the card, AES-GCM encrypted with the card UID as associated data
-and a one-time save id; tapping the card while logged out logs in and moves it back. Changing
-`NFC_SECRET`/`JWT_SECRET` makes existing cards unreadable.
+`/api/nfc/events`; `frontend/src/nfc/useNfc.ts` consumes them.
+
+Cards belong to child accounts, and a tap only acts when a screen asks for one: pay, switch plan,
+"Log out with NFC", or log in (nobody logged in). Every screen that waits for a tap calls
+`nfc_controller.wait_for_card_tap` (marks the tap used so it can't also log in) and
+`require_own_card` (`models/shop.check_card`: the card must be the child's; their first card gets
+linked in `CardLink`). Card UIDs are stored via `normalize_uid` (upper hex, no separators).
+"Log out with NFC" moves the child's vault (`models/vault.py`) onto their card, AES-GCM encrypted
+with the card UID as associated data and a one-time save id. Tapping while logged out restores a
+saved vault if the card has one, otherwise logs in the child the card is linked to. Changing
+`NFC_SECRET`/`JWT_SECRET` makes existing card saves unreadable.
 
 **LED matrix** (Pimoroni Stellar Unicorn 16x16 on a Pico 2 W, USB serial): `core/unicorn.py` finds
 the board by USB VID, Ctrl-C's whatever runs, starts `whack_grid.run()`, then sends line commands
