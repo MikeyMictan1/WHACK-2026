@@ -7,6 +7,7 @@ import { FrontPage } from '../front-page/FrontPage.tsx'
 import { AiFeaturePage } from '../ai-feature/AiFeaturePage.tsx'
 import { ProfilePage } from '../profile/ProfilePage.tsx'
 import { DashboardPage } from '../dashboard/DashboardPage.tsx'
+import { LearnPage } from '../learn/LearnPage.tsx'
 import { AddChildPage } from '../dashboard/AddChildPage.tsx'
 import { ShopPage } from '../shop/ShopPage.tsx'
 import { EarnPage } from '../earn/EarnPage.tsx'
@@ -110,6 +111,7 @@ export function App() {
             </RequireAuth>
           }
         />
+        <Route path="learn" element={<LearnPage />} />
         <Route path="terms" element={<TermsPage />} />
         <Route path="privacy" element={<PrivacyPage />} />
         <Route path="*" element={<NotFoundPage />} />

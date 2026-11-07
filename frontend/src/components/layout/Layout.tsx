@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router'
 import { Footer } from './Footer.tsx'
 import { NavBar } from './NavBar.tsx'
+import { HelpWidget } from '../../help/HelpWidget.tsx'
 import { useNfc } from '../../nfc/useNfc.ts'
 import { Toaster } from '../ui/Toaster.tsx'
 
@@ -18,6 +19,7 @@ export function Layout() {
       </main>
       <Footer />
       <Toaster />
+      <HelpWidget />
     </div>
   )
 }
