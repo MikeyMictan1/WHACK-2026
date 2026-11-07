@@ -12,8 +12,9 @@ type NfcEvent =
 /**
  * Listens to the backend's NFC bridge (/api/nfc/events).
  *
- *  - Logged out + tap: log in with the card's data (it moves to our system, the card goes blank).
- *  - Logged in + tap: nothing. Cards only act during "Log out with NFC" (NfcLogoutScreen).
+ *  - Logged out + tap: log in as the child the card belongs to (saved data on the card comes back).
+ *  - Logged in + tap: nothing here. Taps only act on screens that ask for one (pay, switch plan,
+ *    "Log out with NFC"); those screens wait for the tap on the backend.
  */
 export function useNfc() {
   const navigate = useNavigate()
@@ -34,8 +35,8 @@ export function useNfc() {
 
       loginWithCard()
         .then((u) => {
-          showToast(`Welcome back, ${u.username}. Your data is back and the card is blank again.`)
-          navigate('/profile')
+          showToast(`Welcome back, ${u.display_name ?? u.username}.`)
+          navigate('/dashboard')
         })
         .catch((err: Error) => showToast(err.message, 'error'))
     }

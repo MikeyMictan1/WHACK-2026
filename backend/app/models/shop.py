@@ -190,9 +190,15 @@ def add_entry(session: Session, *, child_id: int, amount: int, kind: EntryKind, 
     session.add(LedgerEntry(child_id=child_id, amount=amount, kind=kind, description=description[:120]))
 
 
+def _expires_at(req: PurchaseRequest) -> datetime:
+    """The clock restarts when the parent approves, so the child always gets the full time to tap."""
+    start = req.decided_at if req.status == "approved" and req.decided_at else req.created_at
+    return start + REQUEST_TTL
+
+
 def expire_if_stale(session: Session, req: PurchaseRequest) -> PurchaseRequest:
     """Requests left pending or approved too long expire. Called whenever one is read."""
-    if req.status in OPEN_STATUSES and utcnow() - req.created_at > REQUEST_TTL:
+    if req.status in OPEN_STATUSES and utcnow() > _expires_at(req):
         req.status = "expired"
         session.add(req)
         session.commit()
@@ -203,7 +209,7 @@ def expire_if_stale(session: Session, req: PurchaseRequest) -> PurchaseRequest:
 def expires_in(req: PurchaseRequest) -> int | None:
     if req.status not in OPEN_STATUSES:
         return None
-    return max(0, int((req.created_at + REQUEST_TTL - utcnow()).total_seconds()))
+    return max(0, int((_expires_at(req) - utcnow()).total_seconds()))
 
 
 def weekly_available_again(session: Session, child_id: int, reward_id: int) -> datetime | None:
@@ -229,6 +235,38 @@ def open_request_for(session: Session, child_id: int) -> PurchaseRequest | None:
         if expire_if_stale(session, req).status in OPEN_STATUSES:
             return req
     return None
+
+
+# ---- NFC cards ---------------------------------------------------------------
+
+class CardError(Exception):
+    """A tapped card that can't be used here (someone else's, or not this child's card)."""
+
+
+def normalize_uid(uid: str) -> str:
+    """One format for card ids, whoever read them: '04:a2:3b' (phone) and '04A23B' (reader) -> '04A23B'."""
+    return "".join(ch for ch in uid if ch.isalnum()).upper()
+
+
+def child_for_card(session: Session, uid: str) -> int | None:
+    link = session.get(CardLink, normalize_uid(uid))
+    return link.child_id if link else None
+
+
+def check_card(session: Session, child_id: int, uid: str) -> None:
+    """The card must be this child's. A child's first card, if nobody owns it, is linked to them.
+
+    Raises CardError. Adds the link to the session; the caller commits.
+    """
+    uid = normalize_uid(uid)
+    owner = child_for_card(session, uid)
+    if owner is not None:
+        if owner != child_id:
+            raise CardError("That card belongs to someone else")
+        return
+    if session.exec(select(CardLink).where(CardLink.child_id == child_id)).first():
+        raise CardError("That isn't your card. Tap the card you used before.")
+    session.add(CardLink(uid=uid, child_id=child_id))
 
 
 # ---- Example items for new parents ("mocks") ---------------------------------

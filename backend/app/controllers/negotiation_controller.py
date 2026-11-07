@@ -17,7 +17,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel, Field
 
 from app.controllers.deps import CurrentChild
-from app.controllers.nfc_controller import hub
+from app.controllers.nfc_controller import require_own_card, wait_for_card_tap
 from app.controllers.plans_controller import CurrentPlan, current_plan
 from app.core import led_feedback, seller_bot
 from app.core.config import settings
@@ -253,7 +253,8 @@ def confirm(session_id: int, body: ConfirmIn, child: CurrentChild, db: SessionDe
             if not settings.allow_simulated_tap:
                 raise HTTPException(status.HTTP_403_FORBIDDEN, "Simulated taps are turned off.")
         else:
-            _wait_for_tap(neg.id or 0)
+            uid = _wait_for_tap(neg.id or 0)
+            require_own_card(db, child.id, uid)
 
         db.refresh(neg)  # it may have changed while we waited
         error = neg_model.confirm_switch(db, neg, profile, card)
@@ -280,24 +281,15 @@ def _cancel_wait(session_id: int) -> None:
             event.set()
 
 
-def _wait_for_tap(session_id: int) -> None:
-    if hub.reader_name is None:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            "No NFC reader is connected. Plug it in, or use the simulate button.",
-        )
+def _wait_for_tap(session_id: int) -> str:
+    """The uid of the card tapped to confirm this switch."""
     cancel = threading.Event()
     with _waiting_lock:
         if old := _waiting.get(session_id):
             old.set()
         _waiting[session_id] = cancel
     try:
-        seq = hub.wait_for_tap(hub.tap_seq, cancel, TAP_WAIT_SECONDS)
-        if seq is None:
-            if cancel.is_set():
-                raise HTTPException(499, "Cancelled.")
-            raise HTTPException(status.HTTP_408_REQUEST_TIMEOUT, "No card was tapped. Try again.")
-        hub.consumed_seq = seq
+        return wait_for_card_tap(cancel, TAP_WAIT_SECONDS)
     finally:
         with _waiting_lock:
             if _waiting.get(session_id) is cancel:

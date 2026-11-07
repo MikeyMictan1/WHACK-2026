@@ -18,6 +18,10 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    # Folder with the built frontend (npm run build). When set and it exists, the backend serves
+    # the site too (one origin in production). Empty locally: Vite serves the frontend.
+    frontend_dist: str = ""
+
     anthropic_api_key: str = ""  # set ANTHROPIC_API_KEY in .env
 
     # Lets "Simulate tap" stand in for a real NFC tap (shop purchases, plan switches). Off for a real deployment.

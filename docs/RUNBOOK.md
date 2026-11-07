@@ -89,3 +89,32 @@ The backend stays on 127.0.0.1; Vite's proxy calls it from the laptop. Login wor
 (common at venues): use the phone's hotspot and join the laptop to it.
 
 To test two accounts on one machine, use a normal window plus an incognito window (cookies are per profile).
+
+## Deploying (Railway)
+
+The whole app is one Docker image (`Dockerfile` at the repo root): the React build is served by
+FastAPI, so the site and `/api` share one origin and the auth cookie works as is. `railway.json`
+tells Railway to use it, health-check `/api/health` and run a single instance (tap waits and the
+NFC/LED state live in that one process, so don't scale it out).
+
+One-time setup:
+
+1. railway.app → sign in with GitHub → New Project → Deploy from GitHub repo → `WHACK-2026`.
+   Pick the branch to deploy (Settings → Source). Every push to it redeploys.
+2. Service → **Volumes** → add a volume mounted at `/data`. The database lives there
+   (`sqlite:////data/app.db`); without the volume every deploy wipes all accounts.
+3. Service → **Variables**:
+   - `JWT_SECRET`: a long random string (keep it stable: changing it logs everyone out and makes
+     data saved on NFC cards unreadable)
+   - `ANTHROPIC_API_KEY`: the Claude key
+   - `ALLOW_SIMULATED_TAP=true` (no reader in the cloud yet, so the simulate button is the way to pay)
+   - Already set by the Dockerfile: `DATABASE_URL`, `FRONTEND_DIST`, `COOKIE_SECURE=true`
+4. Service → Settings → Networking → **Generate Domain**. That's the public HTTPS link.
+
+What works in the cloud: everything except the physical hardware. The NFC poller and LED loop
+start but find nothing (no reader, no board), so taps use "Simulate tap" until the laptop bridge
+exists. The LED Home page still shows the live grid.
+
+Check a build locally without Docker: `npm run build --prefix frontend`, then in Git Bash from
+`backend/`: `FRONTEND_DIST=../frontend/dist uv run fastapi run app/main.py --port 8011` and open
+http://127.0.0.1:8011.
