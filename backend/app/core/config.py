@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     # Lets "Simulate tap" stand in for a real NFC tap (shop purchases, plan switches). Off for a real deployment.
     allow_simulated_tap: bool = True
 
+    # Laptop bridge (python -m app.bridge): lets a deployed backend use the NFC reader and LED board
+    # plugged into a laptop. Same token on both sides; empty disables the bridge endpoint.
+    bridge_token: str = ""
+    # Only used by the laptop running the bridge: the deployed site, e.g. https://whack.up.railway.app
+    bridge_url: str = ""
+
     # Key for encrypting data saved on NFC cards. Falls back to jwt_secret.
     # Changing it makes every existing card unreadable.
     nfc_secret: str = ""

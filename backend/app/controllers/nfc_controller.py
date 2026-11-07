@@ -1,7 +1,9 @@
-"""NFC reader bridge (ACR122U or any PC/SC reader).
+"""NFC: card taps and card memory (ACR122U or any PC/SC reader).
 
-Browsers can't talk to PC/SC readers, so a background thread polls the reader here
-and streams events to the frontend over Server-Sent Events at /api/nfc/events:
+Browsers can't talk to PC/SC readers, so the backend does. The reader is either plugged into
+this machine (core/nfc_hub.py polls it) or into a laptop running the bridge, which connects to
+/api/nfc/bridge when the backend runs in the cloud (core/bridge_link.py). Either way taps
+reach the frontend over Server-Sent Events at /api/nfc/events:
 
   {"type": "reader", "connected": true,  "name": "ACS ACR122U ..."}
   {"type": "reader", "connected": false}
@@ -22,126 +24,28 @@ whichever reader the tap came from.
 """
 
 import asyncio
+import hmac
 import json
 import threading
 import time
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Iterator
+from contextlib import contextmanager
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import StreamingResponse
 
 from app.controllers.auth_controller import _set_auth_cookie
 from app.controllers.deps import CurrentChild, CurrentUser, get_current_user_or_none
 from app.core.config import settings
 from app.core.database import SessionDep
+from app.core.bridge_link import RemoteTag, bridge
 from app.core.nfc_card import NfcError, Tag, card_lock, close_tag, open_tag
+from app.core.nfc_hub import NfcHub
 from app.models import vault
 from app.models.shop import CardError, check_card, child_for_card, normalize_uid
 from app.models.user import User, UserPublic, get_user_by_id
 
 router = APIRouter(prefix="/nfc", tags=["nfc"])
-
-GET_UID = [0xFF, 0xCA, 0x00, 0x00, 0x00]  # PC/SC pseudo-APDU: read card UID
-POLL_SECONDS = 0.3
-
-
-class NfcHub:
-    def __init__(self) -> None:
-        self._subscribers: set[tuple[asyncio.AbstractEventLoop, asyncio.Queue[dict]]] = set()
-        self._lock = threading.Lock()
-        self.reader_name: str | None = None
-        self._thread: threading.Thread | None = None
-        self._stop = threading.Event()
-        # Counts card taps (a card arriving on the reader) so requests can wait for a *new* tap.
-        self.tap_seq = 0
-        self.consumed_seq = -1  # tap already used by a screen (pay, save...), so it can't also log in
-        self.current_uid: str | None = None  # card on the reader right now (None = no card)
-        self.tap_cond = threading.Condition()
-
-    # --- subscriber side (async) ---
-    def subscribe(self) -> asyncio.Queue[dict]:
-        queue: asyncio.Queue[dict] = asyncio.Queue()
-        with self._lock:
-            self._subscribers.add((asyncio.get_running_loop(), queue))
-        return queue
-
-    def unsubscribe(self, queue: asyncio.Queue[dict]) -> None:
-        with self._lock:
-            self._subscribers = {s for s in self._subscribers if s[1] is not queue}
-
-    def _publish(self, event: dict) -> None:
-        with self._lock:
-            subs = list(self._subscribers)
-        for loop, queue in subs:
-            loop.call_soon_threadsafe(queue.put_nowait, event)
-
-    # --- polling thread ---
-    def start(self) -> None:
-        if self._thread is None:
-            self._thread = threading.Thread(target=self._run, name="nfc-poll", daemon=True)
-            self._thread.start()
-
-    def stop(self) -> None:
-        self._stop.set()
-
-    def wait_for_tap(self, after_seq: int, cancel: threading.Event, timeout: float) -> int | None:
-        """Block until a card is tapped after `after_seq`. Returns its seq, or None on cancel/timeout."""
-        deadline = time.monotonic() + timeout
-        with self.tap_cond:
-            while self.tap_seq <= after_seq:
-                left = deadline - time.monotonic()
-                if cancel.is_set() or left <= 0:
-                    return None
-                self.tap_cond.wait(min(left, 0.25))
-            return self.tap_seq
-
-    def _run(self) -> None:
-        try:
-            from smartcard.System import readers
-            from smartcard.scard import SCARD_LEAVE_CARD
-            from smartcard.util import toHexString
-        except ImportError:
-            return  # pyscard missing: NFC simply stays disabled
-
-        last_uid: str | None = None
-        while not self._stop.is_set():
-            try:
-                found = readers()
-            except Exception:
-                found = []
-            name = str(found[0]) if found else None
-
-            if name != self.reader_name:
-                self.reader_name = name
-                last_uid = None
-                self._publish({"type": "reader", "connected": name is not None, "name": name})
-
-            uid = None
-            if found:
-                with card_lock:  # save/login requests also use the reader
-                    try:
-                        conn = found[0].createConnection()
-                        conn.connect(disposition=SCARD_LEAVE_CARD)
-                        data, sw1, sw2 = conn.transmit(GET_UID)
-                        if (sw1, sw2) == (0x90, 0x00):
-                            uid = toHexString(data).replace(" ", "")
-                        conn.disconnect()
-                    except Exception:
-                        uid = None  # no card on the reader
-
-            if uid != last_uid:
-                self.current_uid = uid
-                if uid:
-                    with self.tap_cond:
-                        self.tap_seq += 1
-                        self.tap_cond.notify_all()
-                    self._publish({"type": "card", "uid": uid})
-                else:
-                    self._publish({"type": "card_removed"})
-                last_uid = uid
-
-            time.sleep(POLL_SECONDS)
-
 
 hub = NfcHub()
 
@@ -176,7 +80,48 @@ def require_own_card(session: SessionDep, child_id: int, uid: str) -> None:
 
 @router.get("/status")
 def nfc_status() -> dict[str, object]:
-    return {"connected": hub.reader_name is not None, "name": hub.reader_name}
+    via = "local" if hub.local_reader else "bridge" if hub.bridge_reader else None
+    return {"connected": hub.reader_name is not None, "name": hub.reader_name, "via": via, "bridge": bridge.connected}
+
+
+# ---- the laptop bridge -----------------------------------------------------------
+
+@router.websocket("/bridge")
+async def bridge_socket(ws: WebSocket) -> None:
+    """The laptop bridge (`python -m app.bridge`) connects here. Needs BRIDGE_TOKEN."""
+    token = ws.query_params.get("token") or ""
+    if not settings.bridge_token or not hmac.compare_digest(token, settings.bridge_token):
+        await ws.close(code=1008, reason="Bad or missing bridge token")
+        return
+    await ws.accept()
+    if old := bridge.attach(ws):
+        try:
+            await old.close(code=1012, reason="Another bridge connected")
+        except Exception:
+            pass
+    try:
+        while True:
+            msg = json.loads(await ws.receive_text())
+            kind = msg.get("type")
+            if kind == "reader":
+                hub.set_reader(msg.get("name") or None, bridge=True)
+            elif kind == "card":
+                hub.card_seen(normalize_uid(str(msg.get("uid") or "")) or None)
+            elif kind == "card_removed":
+                hub.card_seen(None)
+            elif kind == "board":
+                bridge.board = {
+                    "connected": bool(msg.get("connected")),
+                    "port": msg.get("port"),
+                    "fast": bool(msg.get("fast")),
+                }
+            elif kind == "reply":
+                bridge.got_reply(msg)
+    except (WebSocketDisconnect, RuntimeError, ValueError):
+        pass
+    finally:
+        if bridge.detach(ws):
+            hub.set_reader(None, bridge=True)
 
 
 @router.get("/events")
@@ -214,18 +159,33 @@ _pending_lock = threading.Lock()
 TAP_WAIT_SECONDS = 60
 
 
-def _on_card[T](action: Callable[[Tag], T]) -> T:
+@contextmanager
+def _open_card() -> Iterator[Tag | RemoteTag]:
+    """The card on whichever reader is in use: plugged in here, or on the laptop bridge.
+    Holds card_lock throughout. Raises NfcError."""
     with card_lock:
-        try:
-            tag = open_tag()
-        except NfcError as e:
-            raise HTTPException(status.HTTP_409_CONFLICT, str(e)) from e
-        try:
+        if hub.local_reader:
+            tag: Tag | RemoteTag = open_tag()
+            try:
+                yield tag
+            finally:
+                close_tag(tag)
+        elif bridge.connected:
+            tag = RemoteTag(bridge)
+            try:
+                yield tag
+            finally:
+                tag.close()
+        else:
+            raise NfcError("No NFC reader plugged in.")
+
+
+def _on_card[T](action: Callable[[Tag | RemoteTag], T]) -> T:
+    try:
+        with _open_card() as tag:
             return action(tag)
-        except NfcError as e:
-            raise HTTPException(status.HTTP_409_CONFLICT, str(e)) from e
-        finally:
-            close_tag(tag)
+    except NfcError as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(e)) from e
 
 
 @router.post("/logout")
@@ -261,7 +221,7 @@ def cancel_logout_with_nfc(user: CurrentUser) -> None:
             cancel.set()
 
 
-def _user_for_tag(session: SessionDep, tag: Tag) -> int:
+def _user_for_tag(session: SessionDep, tag: Tag | RemoteTag) -> int:
     """Who this card logs in. Saved data on the card comes back first; otherwise the linked child."""
     try:
         save = vault.read_card(tag)
@@ -300,13 +260,12 @@ def login_with_card(session: SessionDep, request: Request, response: Response) -
 @router.get("/card")
 def card_info(session: SessionDep) -> dict[str, object]:
     """What's on the reader right now (handy for debugging)."""
-    with card_lock:
-        try:
-            tag = open_tag()
-        except NfcError as e:
-            return {"present": False, "message": str(e)}
-        try:
-            save = vault.read_card(tag)
+    try:
+        with _open_card() as tag:
+            try:
+                save = vault.read_card(tag)
+            except NfcError as e:
+                return {"present": True, "uid": tag.uid.hex().upper(), "message": str(e)}
             return {
                 "present": True,
                 "type": tag.type,
@@ -315,7 +274,5 @@ def card_info(session: SessionDep) -> dict[str, object]:
                 "max_data_bytes": tag.capacity - vault.OVERHEAD,
                 "holds_data": bool(save and vault.is_live(session, save)),
             }
-        except NfcError as e:
-            return {"present": True, "message": str(e)}
-        finally:
-            close_tag(tag)
+    except NfcError as e:
+        return {"present": False, "message": str(e)}

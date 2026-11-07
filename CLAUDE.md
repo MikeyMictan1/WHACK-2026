@@ -166,9 +166,16 @@ Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plan
 
 **NFC** (ACR122U reader via PC/SC, `pyscard`): `core/nfc_card.py` reads/writes raw tag memory
 (NTAG21x, Ultralight, MIFARE Classic 1K); all access must hold `card_lock` because a background
-poller shares the reader. `controllers/nfc_controller.py` runs that poller (started in
-`main.lifespan`) and pushes `hello`/`reader`/`card`/`card_removed` events over SSE at
-`/api/nfc/events`; `frontend/src/nfc/useNfc.ts` consumes them.
+poller shares the reader. `core/nfc_hub.py` (`NfcHub`, started in `main.lifespan`) polls a local
+reader; `controllers/nfc_controller.py` pushes `hello`/`reader`/`card`/`card_removed` events over
+SSE at `/api/nfc/events`; `frontend/src/nfc/useNfc.ts` consumes them.
+
+**Laptop bridge** (deployed site): `backend/app/bridge.py` (`npm run bridge`, needs `BRIDGE_URL` +
+`BRIDGE_TOKEN`) runs on the laptop with the reader/board and connects to the WebSocket
+`/api/nfc/bridge`. Its taps feed the same `NfcHub` (`hub.reader_name` = local reader, else the
+bridge's); card memory goes through `core/bridge_link.RemoteTag` (same surface as `Tag`), and the LED
+loop sends frames with `bridge.send_frame`. Use `nfc_controller._open_card()` for card memory, never
+`open_tag()` directly, so both readers work. Protocol is documented at the top of `core/bridge_link.py`.
 
 Cards belong to child accounts, and a tap only acts when a screen asks for one: pay, switch plan,
 "Log out with NFC", or log in (nobody logged in). Every screen that waits for a tap calls

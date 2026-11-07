@@ -109,13 +109,36 @@ One-time setup:
    - `ANTHROPIC_API_KEY`: the Claude key
    - `ADMIN_PASSWORD`: **must change.** The default (`admin-change-me`) is public in this repo, and
      the admin can move the site clock and see every family. `ADMIN_USERNAME` too, if you like.
-   - `ALLOW_SIMULATED_TAP=true` (no reader in the cloud yet, so the simulate button is the way to pay)
+   - `ALLOW_SIMULATED_TAP=true` (keeps the simulate button as a backup when no reader is connected)
+   - `BRIDGE_TOKEN`: a long random string, so a laptop can connect its NFC reader and LED board
+     (see "Laptop bridge" below). Without it the bridge is switched off.
    - Already set by the Dockerfile: `DATABASE_URL`, `FRONTEND_DIST`, `COOKIE_SECURE=true`
 4. Service → Settings → Networking → **Generate Domain**. That's the public HTTPS link.
 
-What works in the cloud: everything except the physical hardware. The NFC poller and LED loop
-start but find nothing (no reader, no board), so taps use "Simulate tap" until the laptop bridge
-exists. The LED Home page still shows the live grid.
+The server in the cloud has no reader or LED board of its own. Run the laptop bridge to lend it
+yours; without the bridge, taps use "Simulate tap" and the LED Home page still shows the live grid.
+
+### Laptop bridge (NFC reader + LED board for the deployed site)
+
+`backend/app/bridge.py` runs on the laptop the ACR122U and/or the LED board are plugged into. It
+connects to the site over a WebSocket (`/api/nfc/bridge`) and keeps reconnecting if it drops:
+taps go up to the site, card reads/writes ("Log out with NFC", tap to log in) and LED frames come
+down. Every screen that asks for a tap works as if the reader were plugged into the server.
+
+1. Railway → Variables: set `BRIDGE_TOKEN` (generate one in Git Bash:
+   `python -c "import secrets; print(secrets.token_urlsafe(32))"`). Railway redeploys.
+2. On the laptop, add to `backend/.env`:
+   ```
+   BRIDGE_URL=https://<your-app>.up.railway.app
+   BRIDGE_TOKEN=<the same token>
+   ```
+3. Stop the local backend (`scripts/backend-stop`) so only one program talks to the reader, then
+   from the repo root (any shell): `npm run bridge`. It prints `connected`, the reader name and
+   whether it found the LED board. Leave it running during the demo.
+
+Troubleshooting: "refused the token" means the two `BRIDGE_TOKEN`s differ. "HTTP 404/502" means
+the URL is wrong or the site is down. Only one bridge is used at a time; a new one replaces the old.
+The site's `/api/nfc/status` shows `"via": "bridge"` while it's connected.
 
 Check a build locally without Docker: `npm run build --prefix frontend`, then in Git Bash from
 `backend/`: `FRONTEND_DIST=../frontend/dist uv run fastapi run app/main.py --port 8011` and open

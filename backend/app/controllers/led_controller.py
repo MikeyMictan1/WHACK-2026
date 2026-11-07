@@ -17,6 +17,7 @@ from sqlmodel import Session, col, select
 
 from app.controllers.deps import CurrentUser
 from app.core import led_overlay
+from app.core.bridge_link import bridge
 from app.core.config import settings
 from app.core.database import SessionDep, engine
 from app.core.led_skins import DEFAULT_SKIN, SKINS, Ctx, render, to_hex
@@ -32,6 +33,7 @@ CTX_REFRESH_SECONDS = 3
 WEATHER_REFRESH_SECONDS = 600
 BOARD_CHECK_SECONDS = 3
 SLOW_BOARD_FPS = 1.0  # boards with the old whack_grid.py redraw per pixel
+BRIDGE_FPS = 12  # frames sent to a board on the laptop bridge (over the internet)
 
 
 # ---- context: what a skin can show -------------------------------------------
@@ -123,7 +125,7 @@ class LedDisplay:
 
     def _run(self) -> None:
         start = time.monotonic()
-        ctx_at = board_at = pushed_at = 0.0
+        ctx_at = board_at = pushed_at = bridge_at = 0.0
         board_present = False
         while not self._stop.is_set():
             now = time.monotonic()
@@ -167,6 +169,13 @@ class LedDisplay:
                     self.board_error = str(e)
                     board_present = False
 
+            # A board on the laptop bridge (deployed backend) gets the same frames over the WebSocket.
+            if not board_present and bridge.board["connected"]:
+                bridge_gap = 1 / BRIDGE_FPS if bridge.board["fast"] else 1 / SLOW_BOARD_FPS
+                if now - bridge_at >= bridge_gap:
+                    bridge_at = now
+                    bridge.send_frame(frame)
+
             self._stop.wait(1 / SKINS[skin].fps if skin in SKINS else 0.5)
 
 
@@ -184,6 +193,8 @@ def _board() -> dict[str, object]:
         s = unicorn.status()
     except Exception:
         s = {"connected": False, "port": None}
+    if not s["connected"] and bridge.board["connected"]:
+        return {"connected": True, "port": f"laptop {bridge.board['port']}", "fast": bridge.board["fast"], "error": None}
     return {**s, "fast": unicorn.fast, "error": display.board_error}
 
 
