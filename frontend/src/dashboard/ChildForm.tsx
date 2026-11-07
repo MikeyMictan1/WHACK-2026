@@ -10,7 +10,7 @@ import {
   type ChildUpdate,
 } from './childrenApi.ts'
 import { ItemListField } from './ItemListField.tsx'
-import { itemsError, toDrafts, type ItemDraft } from './itemDrafts.ts'
+import { fromWc, itemsError, toDrafts, toWc, type ItemDraft } from './itemDrafts.ts'
 
 type Props =
   | { mode: 'create'; onSubmit: (input: ChildInput) => Promise<void>; onCancel?: () => void }
@@ -64,11 +64,11 @@ export function ChildForm(props: Props) {
     const formEl = e.currentTarget
     const form = new FormData(formEl)
     const display_name = String(form.get('display_name') ?? '').trim()
-    const weekly_allowance = Number(form.get('weekly_allowance'))
+    const weekly_allowance = fromWc(String(form.get('weekly_allowance') ?? ''))
     const password = String(form.get('password') ?? '')
 
     if (!display_name) return setError('Give your child a name')
-    if (!Number.isFinite(weekly_allowance) || weekly_allowance < 0) {
+    if (weekly_allowance === null) {
       return setError('Enter a valid weekly allowance')
     }
     const app_experience =
@@ -86,10 +86,10 @@ export function ChildForm(props: Props) {
     if (listError) return setError(listError)
     const weekly_items = items.map((i) => ({
       name: i.name.trim(),
-      cost: Number(i.cost),
+      cost: fromWc(i.cost) ?? 0,
       weekly_limit: Number(i.weekly_limit),
     }))
-    const milestone_list = milestones.map((m) => ({ name: m.name.trim(), cost: Number(m.cost) }))
+    const milestone_list = milestones.map((m) => ({ name: m.name.trim(), cost: fromWc(m.cost) ?? 0 }))
 
     setError(null)
     setPending(true)
@@ -160,9 +160,10 @@ export function ChildForm(props: Props) {
           label="Weekly allowance"
           name="weekly_allowance"
           type="number"
-          inputMode="numeric"
+          inputMode="decimal"
           min={0}
-          defaultValue={child?.weekly_allowance ?? ''}
+          step="0.01"
+          defaultValue={child?.weekly_allowance != null ? toWc(child.weekly_allowance) : ''}
           hint="Amount in WC"
           required
         />

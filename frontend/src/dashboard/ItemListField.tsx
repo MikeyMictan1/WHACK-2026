@@ -48,8 +48,9 @@ export function ItemListField({ label, meta, noun, placeholder, items, onChange,
             label="Cost"
             hint="WC"
             type="number"
-            inputMode="numeric"
+            inputMode="decimal"
             min={0}
+            step="0.01"
             value={item.cost}
             onChange={(e) => update(item.key, { cost: e.target.value })}
           />

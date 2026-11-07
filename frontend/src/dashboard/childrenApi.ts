@@ -11,7 +11,7 @@ export const CARD_TYPE_OPTIONS = [
   { value: 'calicco_credit', label: 'CaliccoCredit' },
 ] as const
 
-/** Something the child can order each week. `cost` is in WC. */
+/** Something the child can order each week. `cost` is in minor units (1/100 WC). */
 export type WeeklyItemInput = {
   name: string
   cost: number
@@ -20,7 +20,7 @@ export type WeeklyItemInput = {
 
 export type WeeklyItem = WeeklyItemInput & { id: number }
 
-/** A milestone the parent sets for the child. `cost` is in WC. */
+/** A milestone the parent sets for the child. `cost` is in minor units (1/100 WC). */
 export type MilestoneInput = {
   name: string
   cost: number

@@ -81,7 +81,11 @@ under their dashboard. Content lives in one file in the frontend (`learn/content
 2. Parent gets a notification (phone or dashboard) and approves (`approved`) or denies.
 3. Kid's screen shows "Tap your card".
 4. Kid taps. Backend checks the card belongs to that child, then marks it `paid` and moves the money.
-5. Requests expire after a few minutes. Dev builds have a "simulate tap" button.
+5. Requests expire after 15 minutes. A "Simulate tap" button is the backup (`ALLOW_SIMULATED_TAP`).
+6. Weekly items can be bought once every 7 days. One purchase in progress per child at a time.
+
+*(Built: shop, chores with parent approval, bonuses, the full purchase flow with real or simulated
+tap. A child's first card used to pay is linked to them. Parent screens poll; no push notifications.)*
 
 The NFC reader sits on the laptop and acts as the payment terminal. Any device can show the
 "Tap your card" screen because tap events reach browsers over SSE.
@@ -105,6 +109,53 @@ The backend computes all numbers. Claude only explains them.
 
 **Monthly:** score updates, plan changes (APR, limit), kid can switch within what the parent allows.
 
+### 6.1 POTENTIAL CREDIT CARD UPDATE (proposal, not built)
+
+Status: no credit code exists yet. Kids spend their own balance only. This section proposes
+numbers for the cards above so the credit core (NEXT_STEPS.md step 5) has something concrete to
+build against. All values are starting points; tune them after a playtest.
+
+| Card | Limit | APR | Score needed | Perk | Notes |
+|---|---|---|---|---|---|
+| Debit | none (own balance) | none | none | none | Default for the youngest kids. Can't go below £0. |
+| Whack Basic | £20 | 20% | none | none | Starter credit card every child can get. |
+| CapOne Chip | £50 | 15% | 600+ | 1% back | Mid tier, unlocked by a decent score. |
+| Venture W | £150 | 10% | 720+ | 3% back | Best card. Rewards paid as play money. |
+| Loan Shark | £100 | 90% | none, instant | none | £5 late fee. Looks easy, costs the most. The villain. |
+
+Rules:
+
+1. **Grace period.** Pay the full statement by the due date and no interest is charged. Pay part
+   of it and interest is charged on what's left over. This is the most important lesson: it's
+   how real cards work.
+2. **Interest per month** = carried balance × APR / 12, rounded to the nearest penny, added as a
+   `LedgerEntry` on statement day.
+3. **Minimum payment:** the larger of £1 or 10% of the statement. Paying less than the minimum
+   counts as a late payment (score hit, late fee on cards that have one).
+4. **Over the limit:** the tap is declined with the reason (ties into NFC declines).
+5. **Perks** (cashback) are credited after the statement is paid, not at purchase, so rewards
+   come from paying on time.
+6. **Switching cards:** monthly, only to cards the parent allows and the score qualifies for.
+   Loan Shark is always available unless the parent blocks it, to show why "instant approval"
+   is a trap.
+
+**Interest is too small to feel at these amounts.** 20% a year on £20 is about 33p a month. Two
+options:
+
+1. Scale rates up as a "game APR" so the cost is visible.
+2. Keep rates real and have the monthly review show the same choice at real-life size ("on a
+   £1,000 balance this would cost £16.67 this month").
+
+Recommended: option 2. It stays honest and still lands the point.
+
+**Build needs:**
+
+1. Simulated time first ("Skip a month" for parents; NEXT_STEPS.md step 4).
+2. A card record per child: card type, limit, APR, opened date.
+3. Purchases charged to credit instead of balance when the child is on a credit card.
+4. Monthly statement: total, minimum, due date; paying it (ideally by tapping the NFC card).
+5. Score update with reasons shown (section 6 above).
+
 ## 7. NFC card
 
 1. Physical card the kid carries. Identifies the child and holds their data using the existing
@@ -113,6 +164,10 @@ The backend computes all numbers. Claude only explains them.
 3. Reader is an ACR122U on the laptop. Hardware is optional; everything else must work without it.
 
 ## 8. LED matrix (16x16)
+
+*(Built: LED Home page at `/led` mirrors the board live; wardrobe of skins: clock, balance,
+savings jar, mascot free; weather, date, heartbeat, starfield, rainbow, fire, code rain sold in the
+shop as LED skins.)*
 
 1. Mascot that reacts to score and spending.
 2. Credit score shown as colour (red to lime) or utilisation as a filling bar.

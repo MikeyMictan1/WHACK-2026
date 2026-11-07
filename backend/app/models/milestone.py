@@ -9,7 +9,7 @@ class Milestone(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     child_id: int = Field(foreign_key="user.id", index=True)
     name: str = Field(max_length=60)
-    cost: int  # in WC
+    cost: int  # minor units (1/100 WC)
 
 
 # ---- Schemas ---------------------------------------------------------------

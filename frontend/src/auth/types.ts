@@ -7,7 +7,7 @@ export type User = {
   /** Set on child accounts: the parent who manages them. */
   parent_id: number | null
   display_name: string | null
-  /** Children only, in pence. */
+  /** Children only, in minor units (1/100 WC), like all money. */
   weekly_allowance: number | null
   /** Children only: "10+", "13+", "15+", or custom. */
   app_experience: string | null

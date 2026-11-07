@@ -15,8 +15,10 @@ from app.models.user import (
     get_user_by_username,
     list_children,
 )
+from sqlmodel import delete
 
 from app.models.milestone import delete_milestones, list_milestones, replace_milestones
+from app.models.shop import CardLink, ChoreClaim, LedgerEntry, PurchaseRequest
 from app.models.vault import Vault
 from app.models.weekly_item import delete_weekly_items, list_weekly_items, replace_weekly_items
 
@@ -100,5 +102,7 @@ def delete_child(child_id: int, parent: CurrentParent, session: SessionDep) -> N
         session.delete(vault)
     delete_weekly_items(session, child_id)
     delete_milestones(session, child_id)
+    for table in (LedgerEntry, PurchaseRequest, ChoreClaim, CardLink):
+        session.exec(delete(table).where(table.child_id == child.id))  # type: ignore[call-overload]
     session.delete(child)
     session.commit()

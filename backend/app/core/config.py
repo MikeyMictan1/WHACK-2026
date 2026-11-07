@@ -20,9 +20,16 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str = ""  # set ANTHROPIC_API_KEY in .env
 
+    # Lets "Simulate tap" stand in for a real NFC tap (shop purchases, plan switches). Off for a real deployment.
+    allow_simulated_tap: bool = True
+
     # Key for encrypting data saved on NFC cards. Falls back to jwt_secret.
     # Changing it makes every existing card unreadable.
     nfc_secret: str = ""
+
+    # Where the LED "Weather" skin looks (Open-Meteo, no key needed). Default: London.
+    weather_lat: float = 51.5074
+    weather_lon: float = -0.1278
 
 
 settings = Settings()
