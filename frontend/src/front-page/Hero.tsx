@@ -16,7 +16,7 @@ export function Hero() {
       <Flashlight />
 
       <div className="container-x relative flex flex-wrap items-end justify-between gap-8 pt-28 lg:grid lg:grid-cols-[auto_minmax(200px,1fr)_minmax(0,480px)] lg:items-stretch lg:gap-x-12">
-        <h1 className="text-[clamp(3.25rem,7.4vw,7rem)] leading-[0.95] font-light tracking-[-0.045em] text-white">
+        <h1 className="text-[clamp(3.25rem,min(7.4vw,11svh),7rem)] leading-[0.95] font-light tracking-[-0.045em] text-white">
           GIDDY UP 
           <br />
           GLITCH
@@ -45,7 +45,7 @@ export function Hero() {
         </div>
       </div>
 
-      <Carousel className="relative mt-6 min-h-[340px] flex-1 lg:min-h-0" />
+      <Carousel className="relative mt-6 min-h-[380px] flex-1 lg:min-h-0" />
 
       <div className="container-x relative pt-4 pb-8">
         <nav aria-label="Features" className="grid gap-2 sm:grid-cols-3 md:gap-3">

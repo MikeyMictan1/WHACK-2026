@@ -4,9 +4,10 @@
 #   scripts/dev.sh start  frontend|backend ...
 #   scripts/dev.sh stop   frontend|backend ...
 #   scripts/dev.sh status frontend|backend ...
+#   scripts/dev.sh restart frontend|backend ...   (stop all named, then start them)
 #
-# Normally called through the wrappers in the project root
-# (./frontend-start, ./project-stop, ...). See RUNBOOK.md.
+# Normally called through the wrappers next to it
+# (scripts/frontend-start, scripts/project-stop, ...). See RUNBOOK.md.
 #
 # - start: runs the server detached (survives closing the terminal's prompt),
 #   output goes to .run/<name>.log, then waits until it answers HTTP.
@@ -167,13 +168,27 @@ status_service() {
 # --- main --------------------------------------------------------------------
 
 usage() {
-  echo "usage: $0 start|stop|status frontend|backend ..." >&2
+  echo "usage: $0 start|stop|restart|status frontend|backend ..." >&2
   exit 2
 }
 
 [ $# -ge 2 ] || usage
 cmd=$1
 shift
+
+for name in "$@"; do
+  service_known "$name" || { echo "unknown service: $name" >&2; usage; }
+done
+
+if [ "$cmd" = restart ]; then
+  # Stop everything first (frontend before backend), then start in the order given.
+  status=0
+  for name in frontend backend; do
+    case " $* " in *" $name "*) stop_service "$name" || status=1 ;; esac
+  done
+  for name in "$@"; do start_service "$name" || status=1; done
+  exit $status
+fi
 
 status=0
 for name in "$@"; do

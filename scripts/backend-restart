@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Restart the backend dev server in the background. See RUNBOOK.md.
+exec "$(dirname "$0")/dev.sh" restart backend

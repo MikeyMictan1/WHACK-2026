@@ -27,8 +27,8 @@ Edit `backend/.env`:
 ## 3. Run
 
 ```bash
-./project-start        # starts backend + frontend in the background
-./project-stop         # stops them
+scripts/project-start        # starts backend + frontend in the background
+scripts/project-stop         # stops them
 scripts/dev.sh status frontend backend
 ```
 
@@ -59,5 +59,5 @@ The app works without it.
 ## Troubleshooting
 
 - `'vite' is not recognized`: you skipped `npm run setup`.
-- Port already in use: `./project-stop`, then start again.
+- Port already in use: `scripts/project-stop`, then start again.
 - More in [RUNBOOK.md](RUNBOOK.md).

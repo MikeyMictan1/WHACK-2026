@@ -9,7 +9,8 @@ import { useEffect, useRef } from 'react'
   Each card is a solid white frame with the image in a window.
   Any of the 6 slots without a file shows a plain grey placeholder with its expected name.
 
-  Ported from the "Whack Frontpage" mock: same geometry and motion, square cards.
+  Sizing: the card count, card size and ring radius are recomputed on resize (see fit()), so
+  the nearest side cards always fit the height and the visible arc spans the width.
 */
 
 /**
@@ -28,21 +29,28 @@ const CAPTIONS = [
 const TUNING = {
   /** Distinct image slots. The ring repeats them. */
   images: 6,
-  /** Cards on the ring. More = denser ring; must be at least `images`. */
-  cards: 15,
+  /**
+   * Cards on the ring are chosen per screen: as few as possible while the visible arc still
+   * spans the full width. Wide, short screens get more (smaller) cards; phones get fewer.
+   * The count is always a multiple of `images`, so the sequence repeats without a seam.
+   */
+  minCards: 12,
+  maxCards: 30,
   /** Idle rotation in degrees per second. 0 to stop. */
   autoSpeed: 4,
   /** Degrees of rotation per pixel dragged. */
   dragFactor: 0.06,
   /** Card width / height. 0.75 = portrait 3:4. Cards keep this shape at every size. */
   aspect: 0.75,
-  /** Card height as a share of the carousel's height (the front card shows at about this size). */
-  heightShare: 0.74,
   /**
    * Camera distance as a multiple of the ring radius. Lower = stronger fish-eye
    * (small centre card, big side cards). The original mock used 0.91.
    */
-  camera: 1.6,
+  camera: 2.2,
+  /** The tallest (nearest, side) card may use this share of the carousel's height. */
+  heightShare: 0.94,
+  /** The front card is never wider than this share of the carousel's width (phones). */
+  maxFrontWidth: 0.52,
   /** Card height cap in px, so very tall screens don't get giant cards. */
   maxCardHeight: 760,
   /** Gap between cards: 0.9 = cards fill 90% of their slot on the ring. */
@@ -50,6 +58,47 @@ const TUNING = {
   /** Cards beyond this angle from centre are hidden; the last few degrees fade. */
   maxAngle: 78,
   fadeDegrees: 8,
+}
+
+type Geometry = { n: number; cw: number; ch: number; R: number; z0: number; P: number }
+
+/**
+ * For a ring of n cards of width 1: the largest projected half-height of any visible card
+ * corner, and the furthest projected x. Everything scales linearly with card width.
+ */
+function measure(n: number) {
+  const R = n / (2 * Math.PI * TUNING.fill)
+  const z0 = R * 0.96
+  const P = R * TUNING.camera
+  const v = 0.5 / TUNING.aspect
+  let halfH = 0
+  let maxX = 0
+  for (let a = 0; a <= TUNING.maxAngle; a += 1) {
+    const r = (a * Math.PI) / 180
+    for (const u of [-0.5, 0.5]) {
+      // same transform as the cards: translateZ(z0) rotateY(a) translateZ(-R)
+      const x = u * Math.cos(r) - R * Math.sin(r)
+      const z = -u * Math.sin(r) - R * Math.cos(r) + z0
+      const s = P / (P - z)
+      halfH = Math.max(halfH, v * s)
+      maxX = Math.max(maxX, Math.abs(x * s))
+    }
+  }
+  return { halfH, maxX }
+}
+
+/** Size the ring for a W x H stage: no card ever clipped top or bottom, arc fills the width. */
+function fit(W: number, H: number): Geometry {
+  let n = TUNING.minCards
+  let cw = 0
+  for (; n <= TUNING.maxCards; n += TUNING.images) {
+    const { halfH, maxX } = measure(n)
+    cw = Math.min((H * TUNING.heightShare) / (2 * halfH), W * TUNING.maxFrontWidth, TUNING.maxCardHeight * TUNING.aspect)
+    if (2 * maxX * cw >= W * 0.94) break // the outermost cards are fading anyway
+  }
+  n = Math.min(n, TUNING.maxCards - (TUNING.maxCards % TUNING.images))
+  const R = (cw * n) / (2 * Math.PI * TUNING.fill)
+  return { n, cw, ch: cw / TUNING.aspect, R, z0: R * 0.96, P: R * TUNING.camera }
 }
 
 const files = import.meta.glob<string>('../assets/carousel/*.{jpg,jpeg,png,webp,avif,JPG,JPEG,PNG,WEBP}', {
@@ -95,41 +144,37 @@ export function Carousel({ className = '' }: { className?: string }) {
     const auto = reduced ? 0 : TUNING.autoSpeed
     const m: Motion = { rot: 0, vel: auto, dragging: false, lastX: 0, lastT: 0, raf: 0, visible: true, prev: 0 }
 
+    const geo: Geometry = fit(stage.clientWidth, stage.clientHeight)
+    const resize = () => {
+      Object.assign(geo, fit(stage.clientWidth, stage.clientHeight))
+      stage.style.perspective = `${geo.P}px`
+      // frame padding and caption size follow the card, so small cards still read as polaroids
+      stage.style.setProperty('--pad', `${Math.max(4, Math.min(10, geo.cw * 0.05)).toFixed(1)}px`)
+      stage.style.setProperty('--cap', `${Math.max(10, Math.min(15, geo.cw * 0.075)).toFixed(1)}px`)
+      for (let i = 0; i < TUNING.maxCards; i++) {
+        const el = cardRefs.current[i]
+        if (!el) continue
+        el.style.width = `${geo.cw}px`
+        el.style.height = `${geo.ch}px`
+        el.style.marginLeft = `${-geo.cw / 2}px`
+        el.style.marginTop = `${-geo.ch / 2}px`
+      }
+      layout()
+    }
+
     const layout = () => {
-      const W = stage.clientWidth
-      const H = stage.clientHeight
-      const n = TUNING.cards
+      const { n, R, z0 } = geo
       const stepA = 360 / n
-
-      // Size the cards from the space available, keeping their shape fixed:
-      // as tall as the stage allows, but never so wide the ring overflows a narrow screen.
-      const byHeight = Math.min(H * TUNING.heightShare, TUNING.maxCardHeight)
-      const byWidth = (W * 0.62) / TUNING.aspect
-      const ch = Math.min(byHeight, byWidth)
-      const cw = ch * TUNING.aspect
-
-      // The ring radius follows from the card width, and the camera follows the ring,
-      // so the 3D look is identical at any size. The front card sits just behind the
-      // screen plane, so it shows at nearly its full size.
-      const R = (cw * n) / (2 * Math.PI * TUNING.fill)
-      const P = R * TUNING.camera
-      const z0 = R * 0.96
-      stage.style.perspective = `${P}px`
-
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < TUNING.maxCards; i++) {
         const el = cardRefs.current[i]
         if (!el) continue
         const a = ((((m.rot + i * stepA) % 360) + 540) % 360) - 180
         const abs = Math.abs(a)
-        if (abs > TUNING.maxAngle) {
+        if (i >= n || abs > TUNING.maxAngle) {
           el.style.visibility = 'hidden'
           continue
         }
         el.style.visibility = 'visible'
-        el.style.width = `${cw}px`
-        el.style.height = `${ch}px`
-        el.style.marginLeft = `${-cw / 2}px`
-        el.style.marginTop = `${-ch / 2}px`
         el.style.transform = `translateZ(${z0}px) rotateY(${a}deg) translateZ(${-R}px)`
         el.style.opacity = String(Math.max(0, Math.min(1, (TUNING.maxAngle - abs) / TUNING.fadeDegrees)))
       }
@@ -184,7 +229,8 @@ export function Carousel({ className = '' }: { className?: string }) {
     })
     io.observe(stage)
 
-    const ro = new ResizeObserver(layout)
+    const ro = new ResizeObserver(resize)
+    resize()
     ro.observe(stage)
 
     return () => {
@@ -206,7 +252,7 @@ export function Carousel({ className = '' }: { className?: string }) {
       aria-label="Product images. Drag to turn."
       className={`relative w-full cursor-grab touch-pan-y overflow-hidden select-none ${className}`}
     >
-      {Array.from({ length: TUNING.cards }, (_, i) => {
+      {Array.from({ length: TUNING.maxCards }, (_, i) => {
         const slot = SLOTS[i % SLOTS.length]
         return (
           <div
@@ -215,7 +261,7 @@ export function Carousel({ className = '' }: { className?: string }) {
               cardRefs.current[i] = el
             }}
             /* A polaroid: white frame, the picture in a window, a deeper strip below for the caption. */
-            className="invisible absolute top-1/2 left-1/2 flex flex-col border border-ink/15 bg-white px-2.5 pt-2.5 [backface-visibility:hidden] will-change-transform"
+            className="invisible absolute top-1/2 left-1/2 flex flex-col border border-ink/15 bg-white px-(--pad) pt-(--pad) [backface-visibility:hidden] will-change-transform"
           >
             <div className="relative flex-1 overflow-hidden bg-[#eef1f5]">
               {slot.src ? (
@@ -231,7 +277,7 @@ export function Carousel({ className = '' }: { className?: string }) {
                 </span>
               )}
             </div>
-            <p className="flex h-[17%] min-h-10 shrink-0 items-center truncate px-1 text-sm text-ink/75 md:text-[15px]">
+            <p className="flex h-[17%] shrink-0 items-center truncate px-0.5 text-(length:--cap) leading-tight text-ink/75">
               {slot.caption}
             </p>
           </div>

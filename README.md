@@ -23,8 +23,8 @@ npm run dev        # frontend http://localhost:5173 · backend http://localhost:
 
 Ctrl+C stops both. To run just one: `npm run dev:backend` or `npm run dev:frontend`.
 
-To run them in the background instead, use `./project-start` / `./project-stop` (and
-`./frontend-start`, `./backend-stop`, ...) from Git Bash. See [RUNBOOK.md](RUNBOOK.md).
+To run them in the background instead, use `scripts/project-start` / `scripts/project-stop` / `scripts/project-restart` (and
+`scripts/frontend-start`, `scripts/backend-restart`, ...) from Git Bash. See [RUNBOOK.md](RUNBOOK.md).
 The backend takes a few seconds longer to start, so the site may show "Backend offline" briefly.
 
 Vite proxies `/api/*` to the backend, so the auth cookie stays same-origin in dev.

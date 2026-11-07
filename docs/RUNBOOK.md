@@ -7,12 +7,15 @@ see the Windows processes). They don't work from PowerShell or cmd directly.
 
 | Command            | What it does                                             |
 | ------------------ | -------------------------------------------------------- |
-| `./project-start`  | Start backend, then frontend                             |
-| `./project-stop`   | Stop frontend and backend                                |
-| `./frontend-start` | Start the Vite dev server on http://localhost:5173       |
-| `./frontend-stop`  | Stop it                                                  |
-| `./backend-start`  | Start FastAPI on http://127.0.0.1:8000 (docs at `/docs`) |
-| `./backend-stop`   | Stop it                                                  |
+| `scripts/project-start`  | Start backend, then frontend                             |
+| `scripts/project-stop`   | Stop frontend and backend                                |
+| `scripts/project-restart`| Stop both, then start both again                         |
+| `scripts/frontend-start` | Start the Vite dev server on http://localhost:5173       |
+| `scripts/frontend-stop`  | Stop it                                                  |
+| `scripts/frontend-restart` | Stop it, then start it again                           |
+| `scripts/backend-start`  | Start FastAPI on http://127.0.0.1:8000 (docs at `/docs`) |
+| `scripts/backend-stop`   | Stop it                                                  |
+| `scripts/backend-restart` | Stop it, then start it again (e.g. after editing `backend/.env`) |
 
 `scripts/dev.sh status frontend backend` tells you what's running.
 
@@ -29,7 +32,7 @@ tail -f .run/backend.log
 
 ### How the scripts work
 
-All six root scripts are one-line wrappers around [scripts/dev.sh](scripts/dev.sh), which does
+All the wrapper scripts in `scripts/` are one-line wrappers around [scripts/dev.sh](scripts/dev.sh), which does
 the actual work.
 
 **Start**
@@ -70,4 +73,4 @@ why start checks first and stop is thorough.
 - **Scripts fail with `$'\r': command not found`**: the files were checked out with CRLF line
   endings. `.gitattributes` forces LF for them on fresh clones; for an existing checkout,
   switch the file to LF in your editor (VS Code: bottom-right "CRLF" → "LF") and save.
-- **"Permission denied"** on macOS/Linux: `chmod +x frontend-* backend-* project-* scripts/dev.sh`.
+- **"Permission denied"** on macOS/Linux: `chmod +x scripts/*`.

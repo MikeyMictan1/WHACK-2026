@@ -9,7 +9,7 @@ Don't add tests, CI, migrations frameworks or extra layers unless asked.
 
 The user is on Windows. Project scripts are bash and run from Git Bash at the repo root:
 
-- `./project-start` / `./project-stop` both servers in the background (also `frontend-*`, `backend-*`)
+- `scripts/project-start` / `scripts/project-stop` / `scripts/project-restart` both servers in the background (also `scripts/frontend-*`, `scripts/backend-*`)
 - `scripts/dev.sh status frontend backend` shows what's up. Logs: `.run/frontend.log`, `.run/backend.log`
 - `npm run dev` runs both in the foreground; `npm run setup` installs everything (first time)
 - Frontend http://localhost:5173 · backend http://127.0.0.1:8000 · API docs http://127.0.0.1:8000/docs
