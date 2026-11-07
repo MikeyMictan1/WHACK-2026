@@ -4,6 +4,7 @@ from app.controllers.deps import CurrentUser
 from app.core.config import settings
 from app.core.database import SessionDep
 from app.core.security import create_access_token, hash_password, verify_password
+from app.models.shop import add_starter_items
 from app.models.user import User, UserCreate, UserLogin, UserPublic, create_user, get_user_by_username
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -33,6 +34,8 @@ def register(data: UserCreate, session: SessionDep, response: Response) -> User:
         role="parent",
         display_name=(data.display_name or "").strip() or None,
     )
+    assert user.id is not None
+    add_starter_items(session, user.id)  # example rewards and chores; the parent can remove them
     _set_auth_cookie(response, user)
     return user
 

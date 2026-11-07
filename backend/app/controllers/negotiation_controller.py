@@ -197,7 +197,7 @@ def say(session_id: int, body: SayIn, child: CurrentChild, db: SessionDep, bg: B
     turns_left = neg.max_turns - neg.turns_used
     try:
         reply = seller_bot.claude_reply(
-            profile, card, age=child.age, best_bp=neg.best_offer_bp, turns_left=turns_left,
+            profile, card, age=seller_bot.age_from_experience(child.app_experience), best_bp=neg.best_offer_bp, turns_left=turns_left,
             history=history, child_text=text, seen_offers_bp=seen, record=record,
         )
     except HTTPException:
@@ -223,7 +223,7 @@ def accept_offer(session_id: int, child: CurrentChild, db: SessionDep) -> Sessio
     card = _card_of(db, neg)
     neg_model.accept(db, neg)
     if neg.coach_note is None:
-        neg.coach_note = seller_bot.coach_note(profile, card, neg.best_offer_bp, child.age)
+        neg.coach_note = seller_bot.coach_note(profile, card, neg.best_offer_bp, seller_bot.age_from_experience(child.app_experience))
         db.add(neg)
         db.commit()
     return _out(db, neg, profile)

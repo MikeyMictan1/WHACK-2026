@@ -1,8 +1,10 @@
 /** Money arrives from the backend in minor units (1/100 WC); APR in basis points (2499 = 24.99%). */
 
-/** Whack Coins (WC): play money, never a real currency. */
+import { formatMoney } from './money.ts'
+
+/** Play money in the app's display currency (Whack Coins by default; see lib/money.ts). */
 export function money(minor: number): string {
-  return `${(minor / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} WC`
+  return formatMoney(minor)
 }
 
 export function pct(bp: number): string {

@@ -61,6 +61,13 @@ class BotReply:
     scripted: bool = False
 
 
+def age_from_experience(app_experience: str | None) -> int | None:
+    """The parent picks an app experience ("10+", "13+", "15+" or custom) instead of an age; use its number."""
+    if app_experience and app_experience.removesuffix("+").isdigit():
+        return int(app_experience.removesuffix("+"))
+    return None
+
+
 def age_band(age: int | None) -> str:
     if age is None:
         return "13-15"

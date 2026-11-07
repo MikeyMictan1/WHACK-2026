@@ -25,6 +25,8 @@ class Unicorn:
         self._serial = None
         self.port: str | None = None
         self.pixels: list[list[Color | None]] = [[None] * SIZE for _ in range(SIZE)]
+        # True when the board runs the newer whack_grid.py that accepts whole frames ("F").
+        self.fast = False
 
     # ---- connection ----------------------------------------------------
     @staticmethod
@@ -55,6 +57,10 @@ class Unicorn:
         buf = b""
         while time.monotonic() < deadline and b"WHACK_GRID_READY" not in buf:
             buf += ser.read(ser.in_waiting or 1)
+        # The newer script prints "WHACK_GRID_READY 2"; give the rest of the line a moment.
+        end = time.monotonic() + 0.3
+        while b"WHACK_GRID_READY" in buf and b"\n" not in buf.split(b"WHACK_GRID_READY", 1)[1] and time.monotonic() < end:
+            buf += ser.read(ser.in_waiting or 1)
         if b"WHACK_GRID_READY" not in buf:
             ser.close()
             if b"ImportError" in buf or b"no module named" in buf:
@@ -62,6 +68,7 @@ class Unicorn:
             raise UnicornError("The Unicorn didn't respond.")
 
         self._serial, self.port = ser, port
+        self.fast = b"WHACK_GRID_READY 2" in buf
         for y, row in enumerate(self.pixels):
             for x, c in enumerate(row):
                 if c:
@@ -103,6 +110,30 @@ class Unicorn:
         self.pixels[y][x] = color
         r, g, b = color or (0, 0, 0)
         self._command(f"P {x} {y} {r} {g} {b}")
+
+    def show_frame(self, frame: list[Color]) -> None:
+        """Show a whole 16x16 frame (row-major). Whole-frame command on new boards,
+        changed pixels only on boards with the old whack_grid.py."""
+        with self._lock:
+            for attempt in range(2):
+                try:
+                    if self._serial is None:
+                        self._connect()
+                    if self.fast:
+                        self._send("F " + "".join(f"{r:02x}{g:02x}{b:02x}" for r, g, b in frame))
+                    for i, c in enumerate(frame):
+                        y, x = divmod(i, SIZE)
+                        if self.pixels[y][x] != c:
+                            if not self.fast:
+                                self._send(f"P {x} {y} {c[0]} {c[1]} {c[2]}")
+                            self.pixels[y][x] = c
+                    return
+                except UnicornError:
+                    raise
+                except Exception:
+                    self._close()
+                    if attempt:
+                        raise UnicornError("Lost the Unicorn display. Check the USB cable.") from None
 
     def clear(self) -> None:
         self.pixels = [[None] * SIZE for _ in range(SIZE)]

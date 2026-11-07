@@ -1,23 +1,59 @@
 import { api } from '../lib/api.ts'
 import type { User } from '../auth/types.ts'
 
-export const CHILD_MIN_AGE = 10
-export const CHILD_MAX_AGE = 18
+export const APP_EXPERIENCE_PRESETS = ['10+', '13+', '15+'] as const
+
+export const CARD_TYPE_OPTIONS = [
+  { value: 'deer_debit', label: 'DeerDebit' },
+  { value: 'shark_father', label: 'The Shark Father' },
+  { value: 'cap_one', label: 'Cap One' },
+  { value: 'venture_w', label: 'Venture <W>' },
+  { value: 'calicco_credit', label: 'CaliccoCredit' },
+] as const
+
+/** Something the child can order each week. `cost` is in minor units (1/100 WC). */
+export type WeeklyItemInput = {
+  name: string
+  cost: number
+  weekly_limit: number
+}
+
+export type WeeklyItem = WeeklyItemInput & { id: number }
+
+/** A milestone the parent sets for the child. `cost` is in minor units (1/100 WC). */
+export type MilestoneInput = {
+  name: string
+  cost: number
+}
+
+export type Milestone = MilestoneInput & { id: number }
+
+/** A child account as the parent sees it. */
+export type Child = User & { weekly_items: WeeklyItem[]; milestones: Milestone[] }
 
 export type ChildInput = {
   username: string
   password: string
   display_name: string
-  age: number
+  weekly_allowance: number
+  app_experience: string
+  card_type: string
+  weekly_items: WeeklyItemInput[]
+  milestones: MilestoneInput[]
 }
 
-/** Only the fields sent are changed. `password` resets the child's password. */
-export type ChildUpdate = Partial<Pick<ChildInput, 'display_name' | 'age' | 'password'>>
+/** Only the fields sent are changed. `password` resets the child's password; the lists replace what's saved. */
+export type ChildUpdate = Partial<
+  Pick<
+    ChildInput,
+    'display_name' | 'weekly_allowance' | 'app_experience' | 'card_type' | 'password' | 'weekly_items' | 'milestones'
+  >
+>
 
 /** A parent's child accounts. All of these return 403 for a child session. */
 export const childrenApi = {
-  list: () => api<User[]>('/children'),
-  create: (input: ChildInput) => api<User>('/children', { method: 'POST', json: input }),
-  update: (id: number, input: ChildUpdate) => api<User>(`/children/${id}`, { method: 'PATCH', json: input }),
+  list: () => api<Child[]>('/children'),
+  create: (input: ChildInput) => api<Child>('/children', { method: 'POST', json: input }),
+  update: (id: number, input: ChildUpdate) => api<Child>(`/children/${id}`, { method: 'PATCH', json: input }),
   remove: (id: number) => api<void>(`/children/${id}`, { method: 'DELETE' }),
 }

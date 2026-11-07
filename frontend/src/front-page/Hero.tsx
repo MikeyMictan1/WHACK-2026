@@ -33,7 +33,7 @@ export function Hero() {
             A template for Giddy Up Glitch to use for Whack 26'. React and Tailwind frontend on a FastAPI backend, with login already working. Three feature slots that need to be built.
           </p>
           <div className="flex items-center gap-8">
-            <ButtonLink to="/feature-1" variant="light" className="h-14 border border-ink/10 px-8 text-base">
+            <ButtonLink to="/dashboard" variant="light" className="h-14 border border-ink/10 px-8 text-base">
               Explore features
             </ButtonLink>
             {!user && (
