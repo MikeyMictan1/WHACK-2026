@@ -20,9 +20,15 @@ def init_db() -> None:
     """Create tables for every registered model, and add columns that existing tables are missing."""
     import app.models  # noqa: F401  (registers tables on SQLModel.metadata)
 
+    from app.models.clock import get_clock
+    from app.models.user import ensure_admin
+
     _migrate_email_to_username()
     SQLModel.metadata.create_all(engine)  # new tables only; never touches existing ones
-    _add_missing_columns()
+    _add_missing_columns()  # before anything reads the tables (ensure_admin queries user)
+    with Session(engine) as session:
+        ensure_admin(session, settings.admin_username, settings.admin_password)
+        get_clock(session)  # starts the site clock the first time the app runs
 
 
 # ---- Adding columns to existing tables --------------------------------------------------

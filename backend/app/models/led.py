@@ -5,10 +5,11 @@ so they go through the normal purchase flow (parent approval + card tap). Free s
 owned by everyone. Parents can equip any skin (it's their device).
 """
 
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlmodel import Field, Session, SQLModel, col, select
 
+from app.models.clock import site_now
 from app.core.led_skins import SKINS
 from app.models.shop import PurchaseRequest, Reward
 from app.models.user import User
@@ -24,7 +25,7 @@ class LedEquip(SQLModel, table=True):
 
     user_id: int = Field(primary_key=True, foreign_key="user.id")
     skin: str
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: site_now())
 
 
 def ensure_skin_rewards(session: Session, parent_id: int) -> None:
@@ -73,6 +74,6 @@ def latest_equip(session: Session) -> LedEquip | None:
 def set_equip(session: Session, user_id: int, skin: str) -> None:
     row = session.get(LedEquip, user_id) or LedEquip(user_id=user_id, skin=skin)
     row.skin = skin
-    row.updated_at = datetime.now(UTC)
+    row.updated_at = site_now()
     session.add(row)
     session.commit()
