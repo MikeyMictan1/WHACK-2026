@@ -20,6 +20,9 @@ class Settings(BaseSettings):
 
     anthropic_api_key: str = ""  # set ANTHROPIC_API_KEY in .env
 
+    # Lets the "Simulate tap" button confirm a plan switch without an NFC reader. Turn off for a real deployment.
+    allow_simulated_tap: bool = True
+
     # Key for encrypting data saved on NFC cards. Falls back to jwt_secret.
     # Changing it makes every existing card unreadable.
     nfc_secret: str = ""

@@ -42,3 +42,12 @@ def get_current_parent(user: CurrentUser) -> User:
 
 
 CurrentParent = Annotated[User, Depends(get_current_parent)]
+
+
+def get_current_child(user: CurrentUser) -> User:
+    if user.role != "child":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only child accounts can do this")
+    return user
+
+
+CurrentChild = Annotated[User, Depends(get_current_child)]

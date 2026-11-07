@@ -11,7 +11,9 @@ from app.controllers import (
     feature2_controller,
     ai_controller,
     health_controller,
+    negotiation_controller,
     nfc_controller,
+    plans_controller,
     vault_controller,
 )
 from app.core.config import settings
@@ -44,6 +46,8 @@ for controller in (
     feature1_controller,
     feature2_controller,
     ai_controller,
+    plans_controller,
+    negotiation_controller,
     nfc_controller,
     vault_controller,
 ):

@@ -9,6 +9,9 @@ import { Feature2Page } from '../feature-2/Feature2Page.tsx'
 import { AiFeaturePage } from '../ai-feature/AiFeaturePage.tsx'
 import { ProfilePage } from '../profile/ProfilePage.tsx'
 import { DashboardPage } from '../dashboard/DashboardPage.tsx'
+import { MonthlyReviewPage } from '../monthly/MonthlyReviewPage.tsx'
+import { NegotiationPage } from '../negotiation/NegotiationPage.tsx'
+import { PlansPage } from '../plans/PlansPage.tsx'
 import { NotFoundPage } from '../not-found/NotFoundPage.tsx'
 import { PrivacyPage } from '../legal/PrivacyPage.tsx'
 import { TermsPage } from '../legal/TermsPage.tsx'
@@ -28,6 +31,30 @@ export function App() {
           element={
             <RequireAuth>
               <DashboardPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="review"
+          element={
+            <RequireAuth>
+              <MonthlyReviewPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="plans"
+          element={
+            <RequireAuth>
+              <PlansPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="plans/:cardId/negotiate"
+          element={
+            <RequireAuth>
+              <NegotiationPage />
             </RequireAuth>
           }
         />
