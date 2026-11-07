@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { Logo } from './Logo.tsx'
 
 const LEGAL = [
+  { to: '/learn', label: 'Info pages' },
   { to: '/terms', label: 'Terms' },
   { to: '/privacy', label: 'Privacy' },
 ]
@@ -9,7 +10,7 @@ const LEGAL = [
 export function Footer() {
   return (
     <footer className="border-t border-ink/15">
-      <div className="container-x flex items-center justify-between gap-6 py-8">
+      <div className="container-x flex items-center justify-between gap-6 pt-8 pb-28">
         <Logo />
         <ul className="flex gap-8">
           {LEGAL.map((l) => (

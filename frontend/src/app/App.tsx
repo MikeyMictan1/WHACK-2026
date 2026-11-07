@@ -9,6 +9,7 @@ import { Feature2Page } from '../feature-2/Feature2Page.tsx'
 import { AiFeaturePage } from '../ai-feature/AiFeaturePage.tsx'
 import { ProfilePage } from '../profile/ProfilePage.tsx'
 import { DashboardPage } from '../dashboard/DashboardPage.tsx'
+import { LearnPage } from '../learn/LearnPage.tsx'
 import { MonthlyReviewPage } from '../monthly/MonthlyReviewPage.tsx'
 import { NegotiationPage } from '../negotiation/NegotiationPage.tsx'
 import { PlansPage } from '../plans/PlansPage.tsx'
@@ -66,6 +67,7 @@ export function App() {
             </RequireAuth>
           }
         />
+        <Route path="learn" element={<LearnPage />} />
         <Route path="terms" element={<TermsPage />} />
         <Route path="privacy" element={<PrivacyPage />} />
         <Route path="*" element={<NotFoundPage />} />
