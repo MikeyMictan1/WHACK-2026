@@ -47,6 +47,7 @@ class NfcHub:
         # Counts card taps (a card arriving on the reader) so requests can wait for a *new* tap.
         self.tap_seq = 0
         self.consumed_seq = -1  # tap already used by "log out with NFC"
+        self.current_uid: str | None = None  # card on the reader right now (None = no card)
         self.tap_cond = threading.Condition()
 
     # --- subscriber side (async) ---
@@ -121,6 +122,7 @@ class NfcHub:
                         uid = None  # no card on the reader
 
             if uid != last_uid:
+                self.current_uid = uid
                 if uid:
                     with self.tap_cond:
                         self.tap_seq += 1

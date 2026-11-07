@@ -34,7 +34,8 @@ in `frontend/` (`npm install <pkg> --prefix frontend`).
 backend/app/
   main.py            app setup; every controller's router is registered here under /api
   core/              config (pydantic-settings, reads backend/.env), database, security (JWT,
-                     argon2), nfc_card (reader I/O), unicorn (LED matrix serial bridge)
+                     argon2), nfc_card (reader I/O), unicorn (LED matrix serial bridge),
+                     led_skins (what the LED can show: one render function per skin)
   models/            M: SQLModel tables + request/response schemas + data-access functions
   controllers/       C: one APIRouter per area; deps.py has CurrentUser and CurrentParent
 frontend/src/
@@ -48,8 +49,10 @@ frontend/src/
     feature/         FeaturePage placeholder scaffold, ApiStatus
     visual/          BlurBackdrop, Flashlight
   auth/              AuthProvider, useAuth(), RequireAuth, Login/Register pages
-  dashboard/         /dashboard: ParentDashboard (manage kids) or ChildDashboard, by user.role
-  front-page/  feature-1/  feature-2/  ai-feature/  profile/  vault/  nfc/  legal/  not-found/
+  dashboard/         /dashboard: ParentDashboard (approvals, manage kids) or ChildDashboard, by user.role
+  shop/  earn/  manage/  child /shop (+ PurchaseFlow overlay), child /earn, parent /manage; shopApi.ts
+  led/               /led "LED Home": live LedGrid of the board + wardrobe of skins
+  front-page/  ai-feature/  profile/  vault/  nfc/  legal/  not-found/
   assets/            backdrop/, carousel/, mascot/ images (numbered PNGs, see each README)
 hardware/unicorn/    whack_grid.py, MicroPython that runs on the LED board
 ```
@@ -71,8 +74,8 @@ Frontend:
 2. Register the route in `app/App.tsx` (wrap in `<RequireAuth>` if it needs login).
 3. Optionally add it to `NAV_LINKS` in `components/layout/navigation.ts`.
 
-`feature-1` (`/feature-1`, `/api/feature-1`) is still a placeholder; repurpose it rather than
-adding a parallel page. `feature-2` is the LED grid page.
+The template's feature-1 and feature-2 are gone: the nav is Shop (`/shop`), LED Home (`/led`) and
+AI. The old paths redirect.
 
 ## Gotchas
 
@@ -83,6 +86,13 @@ adding a parallel page. `feature-2` is the LED grid page.
 - **Accounts:** one `user` table with `role` = `parent` | `child`. `/auth/register` only creates
   parents; children are created by their parent via `/api/children` (`parent_id` set) and log in
   on the normal login page. Use `CurrentParent` for parent-only endpoints.
+- **Play money** (`models/shop.py`, `shop_controller`, `chores_controller`): amounts are integer
+  pence; balance = sum of `LedgerEntry` rows (never store a balance column). Purchase requests go
+  `pending -> approved -> paid`; `/shop/requests/{id}/pay` blocks up to 30 s waiting for a tap on
+  the reader (`?simulate=true` skips it). A child's first card used to pay gets linked (`CardLink`).
+  New parents get example rewards/chores (`STARTER_REWARDS`). Parent screens poll every 2-3 s.
+- **Backend hot reload can hang** (open SSE streams / the NFC thread). If an endpoint change doesn't
+  show up, run `scripts/backend-restart`.
 - **Auth is a cookie**, not a header. `api()` sends `credentials: 'include'`; don't add
   Authorization headers or localStorage tokens.
 - **Imports include the extension** in the frontend (`'./Foo.tsx'`, `'../lib/api.ts'`).
@@ -106,7 +116,7 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
 
 Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plans_controller`) ->
 `/plans/:cardId/negotiate` (`negotiation_controller`) -> accept -> tap card (or "Simulate tap" in dev)
--> plan switched. Money is integer hundredths of a Whack Coin (WC, play money; shown as "40.00 WC"), APR is integer basis points (2499 = 24.99%).
+-> plan switched. Money is integer hundredths of a Whack Coin (WC, play money; shown as "40.00 WC"; format with `formatMoney`/`money()`, both driven by `CURRENCY` in `frontend/src/lib/money.ts`), APR is integer basis points (2499 = 24.99%).
 
 - Numbers are the backend's: `models/pricing.py` computes the floor APR from score, payment streak and
   utilisation, and `clamp_offer` limits every bot offer (down to the floor in steps; up by 1 point per rude message, at most 3 points over the listed APR). The bot (`core/seller_bot.py`) never sees the
@@ -116,6 +126,9 @@ Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plan
   score and statements exist.
 - If Claude is unreachable the scripted bot in `seller_bot.py` takes over so the demo still runs.
 - `core/led_feedback.py` fills a bar on the LED grid as the discount grows; it is best effort.
+  It goes through `core/led_overlay.py` (shown for a few seconds, then the equipped skin returns).
+  **Never write to `unicorn` directly**: the LED Home display loop owns the board and would
+  overwrite it. Use `led_overlay.show(frame, seconds)` for any event feedback.
 - `ALLOW_SIMULATED_TAP` (config) enables the dev-only simulate button on the confirm screen.
 
 ## Hardware
@@ -131,9 +144,18 @@ and a one-time save id; tapping the card while logged out logs in and moves it b
 
 **LED matrix** (Pimoroni Stellar Unicorn 16x16 on a Pico 2 W, USB serial): `core/unicorn.py` finds
 the board by USB VID, Ctrl-C's whatever runs, starts `whack_grid.run()`, then sends line commands
-`P x y r g b`, `C`, `B n`. The board needs `hardware/unicorn/whack_grid.py` copied to it once:
-`uvx mpremote connect COM3 cp hardware/unicorn/whack_grid.py :whack_grid.py`.
-`controllers/feature2_controller.py` exposes it under `/api/feature-2`.
+`P x y r g b`, `F <768-byte hex frame>`, `C`, `B n`. The board needs `hardware/unicorn/whack_grid.py`
+copied to it (again after it changes; the `F` command is new):
+`uvx mpremote connect COM3 cp hardware/unicorn/whack_grid.py :whack_grid.py`. Boards with the old
+script still work, falling back to per-pixel updates at 1 fps.
+
+**LED Home** (`controllers/led_controller.py`): a background thread (started in `main.lifespan`)
+renders the equipped skin from `core/led_skins.py`, keeps the frame for `GET /api/led/state` (the
+page polls it every 200 ms) and pushes it to the board, so screen and board match. Skins: free ones
+(clock, balance, savings jar, mascot) for everyone; paid ones become `led_skin` shop items per family
+(`models/led.py` `RewardSkin`) and are bought through the normal purchase flow. The last equip
+wins the single board. Weather comes from Open-Meteo (`WEATHER_LAT`/`WEATHER_LON`) via httpx.
+To add a skin: write `render(t, ctx, state) -> 256 colours` and add it to `SKINS`.
 
 ## Design rules (frontend)
 

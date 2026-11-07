@@ -42,7 +42,7 @@ src/
     ui/                 Button, TextField, FormError
     feature/            shared placeholder scaffold for feature pages
   auth/                 AuthProvider, useAuth, RequireAuth, Login/Register pages
-  front-page/  feature-1/  feature-2/  ai-feature/  profile/  not-found/
+  front-page/  shop/  earn/  manage/  led/  dashboard/  ai-feature/  profile/  not-found/
 ```
 
 To add a page: create a folder, add the component, register the route in `app/App.tsx`, and
