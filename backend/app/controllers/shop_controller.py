@@ -154,6 +154,11 @@ def starter_pack(parent: CurrentParent, session: SessionDep) -> None:
 def wallet(user: CurrentUser, session: SessionDep) -> Wallet:
     child = _require_child(user)
     assert child.id is not None
+    # First, because it creates the child's credit account (and commits) the first time. A commit expires
+    # everything already loaded, so loading the transactions before this would hand back empty rows.
+    profile = get_profile(session, child.id)
+    plan_card = get_card(session, profile.current_card_id)
+    on_credit = is_credit(profile)
     entries = session.exec(
         select(LedgerEntry)
         .where(LedgerEntry.child_id == child.id)
@@ -167,10 +172,7 @@ def wallet(user: CurrentUser, session: SessionDep) -> Wallet:
         .order_by(col(CreditEntry.created_at).desc())
         .limit(20)
     ).all()
-    profile = get_profile(session, child.id)
-    plan_card = get_card(session, profile.current_card_id)
-    on_credit = is_credit(profile)
-    transactions = [LedgerEntryPublic(**e.model_dump()) for e in entries] + [  # type: ignore[arg-type]
+    transactions =[LedgerEntryPublic(**e.model_dump()) for e in entries] + [  # type: ignore[arg-type]
         LedgerEntryPublic(
             id=-(c.id or 0), amount=-c.amount, kind="card purchase", description=c.description, created_at=c.created_at
         )

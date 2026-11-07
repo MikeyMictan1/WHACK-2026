@@ -26,6 +26,27 @@ export type Statement = {
 
 export type CreditEntry = { id: number; amount: number; kind: string; description: string; on_date: string }
 
+export type ScoreFactor = { key: 'payment' | 'utilisation' | 'history'; name: string; points: number; max_points: number; note: string }
+
+export type ScoreReason = { factor: string; factor_name: string; delta: number; reason: string }
+
+export type ScorePoint = { month: number; score: number; date: string }
+
+export type ScoreInfo = {
+  score: number
+  min_score: number
+  max_score: number
+  band: string
+  /** How much it moved last month; null before the first statement. */
+  change: number | null
+  factors: ScoreFactor[]
+  /** Why it moved last month. */
+  reasons: ScoreReason[]
+  /** Oldest first, month 0 is where the account started. */
+  history: ScorePoint[]
+  next_unlock: { card_name: string; min_score: number; points_needed: number } | null
+}
+
 export type CreditSummary = {
   card: { id: string; name: string; apr_bp: number; credit_limit: number; rewards_bp: number; late_fee: number }
   has_credit: boolean
@@ -49,6 +70,9 @@ export type CreditSummary = {
   grace_days: number
   min_payment_percent: number
   min_payment_floor: number
+  /** The parent's setting: is credit score tracking on for this child? */
+  score_enabled: boolean
+  score: ScoreInfo | null
 }
 
 export type PayResult = { summary: CreditSummary; paid: number; cash_back: number }
@@ -66,6 +90,9 @@ export type ChildCredit = {
   statement_remaining: number | null
   due_date: string | null
   status: StatementStatus | null
+  /** Null when this child's score tracking is off. */
+  score: number | null
+  score_change: number | null
 }
 
 export type SkipResult = {
@@ -78,6 +105,10 @@ export type SkipResult = {
   interest: number
   late_fee: number
   statement: Statement | null
+  score_enabled: boolean
+  score_before: number | null
+  score_after: number | null
+  score_changes: ScoreReason[]
 }
 
 export const STATUS_LABEL: Record<StatementStatus, string> = {

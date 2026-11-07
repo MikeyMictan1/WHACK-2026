@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { nameOf, type User } from '../auth/types.ts'
 import { PageHeader } from '../components/layout/PageHeader.tsx'
-import { ButtonLink } from '../components/ui/Button.tsx'
+import { ButtonLink, TextLink } from '../components/ui/Button.tsx'
 import { Skeleton } from '../components/ui/Skeleton.tsx'
 import { creditApi, formatDate, type CreditSummary } from '../credit/creditApi.ts'
 import { formatMoney } from '../lib/money.ts'
@@ -83,26 +83,37 @@ export function ChildDashboard({ child }: { child: User }) {
 function CardGlance({ credit }: { credit: CreditSummary }) {
   const st = credit.statement
   const nextPayment = st && credit.can_pay ? `${formatMoney(st.remaining)} by ${formatDate(st.due_date)}` : 'Nothing due'
-  const rows = credit.has_credit
-    ? ([
+  const rows: [string, string][] = credit.has_credit
+    ? [
         ['Your card', credit.card.name],
         ['Credit left', `${formatMoney(credit.available)} of ${formatMoney(credit.limit)}`],
         ['You owe', formatMoney(credit.owed)],
         ['Next payment', nextPayment],
-      ] as const)
-    : ([
+      ]
+    : [
         ['Your card', credit.card.name],
         ['How it works', 'You spend your own money'],
-      ] as const)
+      ]
+  const score = credit.score // null when the parent has switched score tracking off
+  if (score) {
+    rows.push(['Credit score', `${score.score}${score.change ? ` (${score.change > 0 ? '+' : '−'}${Math.abs(score.change)})` : ''}`])
+  }
 
   return (
-    <dl className="mt-10 grid grid-cols-2 border-t border-ink md:grid-cols-4">
-      {rows.map(([term, value]) => (
-        <div key={term} className="border-b border-ink/15 py-5 pr-4">
-          <dt className="meta">{term}</dt>
-          <dd className="mt-1 text-d4">{value}</dd>
-        </div>
-      ))}
-    </dl>
+    <>
+      <dl className={`mt-10 grid grid-cols-2 border-t border-ink ${rows.length > 4 ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+        {rows.map(([term, value]) => (
+          <div key={term} className="border-b border-ink/15 py-5 pr-4">
+            <dt className="meta">{term}</dt>
+            <dd className="mt-1 text-d4">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {score && (
+        <p className="mt-4 text-sm">
+          {score.band}. <TextLink to="/learn#score">How your credit score works</TextLink>
+        </p>
+      )}
+    </>
   )
 }

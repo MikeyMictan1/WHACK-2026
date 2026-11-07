@@ -25,7 +25,7 @@ from app.controllers.nfc_controller import (
 from app.controllers.shop_controller import TAP_TIMEOUT_SECONDS
 from app.core.config import settings
 from app.core.database import SessionDep
-from app.models.card import Card, get_card, get_profile
+from app.models.card import Card, CreditProfile, get_card, get_profile, list_cards
 from app.models.credit import (
     CYCLE_DAYS,
     EXAMPLE_BALANCE,
@@ -47,6 +47,18 @@ from app.models.credit import (
     unbilled_purchases,
 )
 from app.models.pricing import switch_locked_reason
+from app.models.score import (
+    FACTOR_NAMES,
+    HISTORY_FULL_MONTHS,
+    HISTORY_MAX,
+    PAYMENT_MAX,
+    SCORE_MAX,
+    SCORE_MIN,
+    UTILISATION_MAX,
+    ScoreEvent,
+    band_of,
+    score_enabled,
+)
 from app.models.shop import balance_of
 from app.models.user import User, get_child, list_children
 
@@ -95,6 +107,45 @@ class EntryOut(BaseModel):
     on_date: datetime
 
 
+class ScoreFactor(BaseModel):
+    key: str  # payment | utilisation | history
+    name: str
+    points: int
+    max_points: int
+    note: str
+
+
+class ScoreReason(BaseModel):
+    factor: str
+    factor_name: str
+    delta: int
+    reason: str
+
+
+class ScorePoint(BaseModel):
+    month: int  # 0 is where the account started
+    score: int
+    date: datetime
+
+
+class NextUnlock(BaseModel):
+    card_name: str
+    min_score: int
+    points_needed: int
+
+
+class ScoreInfo(BaseModel):
+    score: int
+    min_score: int
+    max_score: int
+    band: str
+    change: int | None  # last month's change; None before the first statement
+    factors: list[ScoreFactor]  # how the score is made up right now
+    reasons: list[ScoreReason]  # why it moved last month
+    history: list[ScorePoint]  # oldest first, from where the account started
+    next_unlock: NextUnlock | None  # the closest card the score does not reach yet
+
+
 class CreditSummary(BaseModel):
     card: CardInfo
     has_credit: bool
@@ -116,6 +167,8 @@ class CreditSummary(BaseModel):
     grace_days: int
     min_payment_percent: int
     min_payment_floor: int
+    score_enabled: bool  # the parent's setting: is credit score tracking on for this child?
+    score: ScoreInfo | None  # None when tracking is off
 
 
 class PayIn(BaseModel):
@@ -143,6 +196,8 @@ class ChildCredit(BaseModel):
     statement_remaining: int | None
     due_date: datetime | None
     status: str | None
+    score: int | None  # None when the child's score tracking is off
+    score_change: int | None  # last month's change
 
 
 class SkipOut(BaseModel):
@@ -155,6 +210,10 @@ class SkipOut(BaseModel):
     interest: int
     late_fee: int
     statement: StatementOut | None
+    score_enabled: bool = False
+    score_before: int | None = None  # only when the child's score tracking is on
+    score_after: int | None = None
+    score_changes: list[ScoreReason] = []
 
 
 # ---- builders ---------------------------------------------------------------------
@@ -172,6 +231,68 @@ def _statement_out(session: Session, s: Statement) -> StatementOut:
 
 def _display_name(user: User) -> str:
     return user.display_name or user.username
+
+
+def _reason(factor: str, delta: int, reason: str) -> ScoreReason:
+    return ScoreReason(factor=factor, factor_name=FACTOR_NAMES.get(factor, factor), delta=delta, reason=reason)
+
+
+def _latest_change(session: Session, child_id: int) -> int | None:
+    """How much the score moved in the most recent month that touched it."""
+    last = session.exec(select(ScoreEvent).where(ScoreEvent.child_id == child_id).order_by(col(ScoreEvent.id).desc())).first()
+    if last is None:
+        return None
+    rows = session.exec(select(ScoreEvent).where(ScoreEvent.child_id == child_id, ScoreEvent.month == last.month)).all()
+    return sum(e.delta for e in rows)
+
+
+def build_score_info(session: Session, profile: CreditProfile) -> ScoreInfo:
+    events = session.exec(
+        select(ScoreEvent).where(ScoreEvent.child_id == profile.user_id).order_by(col(ScoreEvent.month), col(ScoreEvent.id))
+    ).all()
+    by_month: dict[int, list[ScoreEvent]] = {}
+    for e in events:
+        by_month.setdefault(e.month, []).append(e)
+    months = sorted(by_month)
+    latest = by_month[months[-1]] if months else []
+
+    history: list[ScorePoint] = []
+    if months:
+        first = by_month[months[0]]
+        start = first[0].score_after - sum(e.delta for e in first)  # the score before the first month was measured
+        history.append(ScorePoint(month=0, score=start, date=aware(profile.opened_at or first[0].on_date)))
+        history += [ScorePoint(month=m, score=by_month[m][-1].score_after, date=aware(by_month[m][-1].on_date)) for m in months]
+
+    locked = [c for c in list_cards(session) if c.min_score > profile.score]
+    nearest = min(locked, key=lambda c: c.min_score) if locked else None
+    return ScoreInfo(
+        score=profile.score,
+        min_score=SCORE_MIN,
+        max_score=SCORE_MAX,
+        band=band_of(profile.score),
+        change=sum(e.delta for e in latest) if latest else None,
+        factors=[
+            ScoreFactor(
+                key="payment", name=FACTOR_NAMES["payment"], points=profile.score_payment, max_points=PAYMENT_MAX,
+                note="The biggest part. Paying on time builds it slowly; a late payment costs a lot.",
+            ),
+            ScoreFactor(
+                key="utilisation", name=FACTOR_NAMES["utilisation"], points=profile.score_utilisation,
+                max_points=UTILISATION_MAX, note="How much of your limit you use on statement day. Under 10% is best.",
+            ),
+            ScoreFactor(
+                key="history", name=FACTOR_NAMES["history"], points=profile.score_history, max_points=HISTORY_MAX,
+                note=f"How long you have had your account: {profile.months_open} of {HISTORY_FULL_MONTHS} months for full marks.",
+            ),
+        ],
+        reasons=[_reason(e.factor, e.delta, e.reason) for e in latest],
+        history=history[-13:],
+        next_unlock=(
+            NextUnlock(card_name=nearest.name, min_score=nearest.min_score, points_needed=nearest.min_score - profile.score)
+            if nearest
+            else None
+        ),
+    )
 
 
 def build_summary(session: Session, child: User) -> CreditSummary:
@@ -215,6 +336,8 @@ def build_summary(session: Session, child: User) -> CreditSummary:
         grace_days=GRACE_DAYS,
         min_payment_percent=MIN_PAYMENT_PERCENT,
         min_payment_floor=MIN_PAYMENT_FLOOR,
+        score_enabled=score_enabled(child.app_experience),
+        score=build_score_info(session, profile) if score_enabled(child.app_experience) else None,
     )
 
 
@@ -301,6 +424,8 @@ def children_credit(parent: CurrentParent, session: SessionDep) -> list[ChildCre
                 statement_remaining=remaining_on(statement) if statement else None,
                 due_date=statement.due_date if statement else None,
                 status=statement.status if statement else None,
+                score=profile.score if score_enabled(child.app_experience) else None,
+                score_change=_latest_change(session, child.id) if score_enabled(child.app_experience) else None,
             )
         )
     return out
@@ -328,4 +453,10 @@ def skip_month(child_id: int, parent: CurrentParent, session: SessionDep) -> Ski
         interest=result.interest,
         late_fee=result.late_fee,
         statement=_statement_out(session, result.statement) if result.statement else None,
+        score_enabled=score_enabled(child.app_experience),
+        score_before=result.score_before if score_enabled(child.app_experience) else None,
+        score_after=result.score_after if score_enabled(child.app_experience) else None,
+        score_changes=(
+            [_reason(c.factor, c.delta, c.reason) for c in result.score_changes] if score_enabled(child.app_experience) else []
+        ),
     )

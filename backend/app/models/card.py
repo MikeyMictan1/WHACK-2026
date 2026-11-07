@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 
 from sqlmodel import Field, Session, SQLModel, select
 
+from app.models.score import init_score, utilisation_bp_of
+
 # ---- Tables ----------------------------------------------------------------
 
 
@@ -35,11 +37,14 @@ class CreditProfile(SQLModel, table=True):
 
     Created on first use. `balance` is what the child owes on the card right now; it is only ever
     changed together with a `CreditEntry` (see models/credit.py), which is the single place that does it.
-    `score` is still a placeholder number: it is not calculated from behaviour yet.
+    `score` is calculated from behaviour, once a month (models/score.py): 300 + the three parts below.
     """
 
     user_id: int = Field(primary_key=True, foreign_key="user.id")
-    score: int = 640  # placeholder until the score is calculated
+    score: int = 580  # 300 to 800; recalculated when a statement is issued (models/score.py)
+    score_payment: int = -1  # payment history points, 0 to 250. -1 = the score is not set up yet
+    score_utilisation: int = 0  # credit used points, 0 to 150
+    score_history: int = 0  # length of history points, 0 to 100
     current_card_id: str = "whack_basic"
     current_apr_bp: int = 2000  # the APR this child actually pays (a negotiation can change it)
     credit_limit: int = 2_000
@@ -133,6 +138,7 @@ def get_profile(session: Session, user_id: int) -> CreditProfile:
             sim_now=now,
             opened_at=now,
         )
+        init_score(profile)
         session.add(profile)
         session.commit()
         session.refresh(profile)
@@ -149,6 +155,12 @@ def get_profile(session: Session, user_id: int) -> CreditProfile:
         profile.months_open = 0
         profile.sim_now = now
         profile.opened_at = now
+        session.add(profile)
+        session.commit()
+        session.refresh(profile)
+    if profile.score_payment < 0:
+        # Made before scores were calculated (it carried a placeholder number): set it up from the account as it is now.
+        init_score(profile, utilisation_bp_of(profile.balance, profile.credit_limit))
         session.add(profile)
         session.commit()
         session.refresh(profile)

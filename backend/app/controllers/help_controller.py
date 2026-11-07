@@ -8,11 +8,14 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
+from sqlmodel import col, select
 
 from app.controllers.deps import get_current_user_or_none
 from app.core import help_bot
+from app.core.seller_bot import age_from_experience
 from app.core.database import SessionDep
 from app.models.card import get_card, get_profile
+from app.models.score import ScoreEvent, score_enabled
 from app.models.help import HelpMessage
 from app.models.user import User
 
@@ -92,9 +95,23 @@ def chat(body: HelpIn, request: Request, user: MaybeUser, db: SessionDep) -> Hel
     if user and user.role == "child" and user.id is not None:
         profile = get_profile(db, user.id)
         card = get_card(db, profile.current_card_id)
+        tracking = score_enabled(user.app_experience)
+        reasons: list[str] = []
+        if tracking:
+            latest = db.exec(
+                select(ScoreEvent).where(ScoreEvent.child_id == user.id).order_by(col(ScoreEvent.id).desc()).limit(1)
+            ).first()
+            if latest is not None:
+                rows = db.exec(
+                    select(ScoreEvent)
+                    .where(ScoreEvent.child_id == user.id, ScoreEvent.month == latest.month)
+                    .order_by(col(ScoreEvent.id))
+                ).all()
+                reasons = [f"{e.delta:+d} {e.reason}" for e in rows]
         facts = help_bot.ChildFacts(
-            age=user.age,
-            score=profile.score,
+            age=age_from_experience(user.app_experience),
+            score=profile.score if tracking else None,
+            score_reasons=reasons,
             plan_name=card.name if card else "your",
             apr_bp=profile.current_apr_bp,
             utilisation_pct=round(100 * profile.balance / profile.credit_limit) if profile.credit_limit else 0,
@@ -104,7 +121,11 @@ def chat(body: HelpIn, request: Request, user: MaybeUser, db: SessionDep) -> Hel
     scripted = False
     try:
         reply = help_bot.claude_answer(
-            message=message, history=_clean_history(body.history), age=user.age if user else None, page=page, facts=facts
+            message=message,
+            history=_clean_history(body.history),
+            age=age_from_experience(user.app_experience) if user else None,
+            page=page,
+            facts=facts,
         )
     except HTTPException:
         # No key, rate limit or API down: a short scripted answer keeps the helper useful.
