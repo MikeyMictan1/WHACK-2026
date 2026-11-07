@@ -36,7 +36,7 @@ backend/app/
   core/              config (pydantic-settings, reads backend/.env), database, security (JWT,
                      argon2), nfc_card (reader I/O), unicorn (LED matrix serial bridge)
   models/            M: SQLModel tables + request/response schemas + data-access functions
-  controllers/       C: one APIRouter per area; deps.py has CurrentUser
+  controllers/       C: one APIRouter per area; deps.py has CurrentUser and CurrentParent
 frontend/src/
   main.tsx           entry (only file directly in src/)
   app/App.tsx        route table
@@ -48,6 +48,7 @@ frontend/src/
     feature/         FeaturePage placeholder scaffold, ApiStatus
     visual/          BlurBackdrop, Flashlight
   auth/              AuthProvider, useAuth(), RequireAuth, Login/Register pages
+  dashboard/         /dashboard: ParentDashboard (manage kids) or ChildDashboard, by user.role
   front-page/  feature-1/  feature-2/  ai-feature/  profile/  vault/  nfc/  legal/  not-found/
   assets/            backdrop/, carousel/, mascot/ images (numbered PNGs, see each README)
 hardware/unicorn/    whack_grid.py, MicroPython that runs on the LED board
@@ -79,6 +80,9 @@ adding a parallel page. `feature-2` is the LED grid page.
   but never adds columns to existing ones. After adding or changing a column on an existing table,
   stop the backend, delete `backend/app.db`, and start it again (this wipes users and data).
   Tell the user when you do this.
+- **Accounts:** one `user` table with `role` = `parent` | `child`. `/auth/register` only creates
+  parents; children are created by their parent via `/api/children` (`parent_id` set) and log in
+  on the normal login page. Use `CurrentParent` for parent-only endpoints.
 - **Auth is a cookie**, not a header. `api()` sends `credentials: 'include'`; don't add
   Authorization headers or localStorage tokens.
 - **Imports include the extension** in the frontend (`'./Foo.tsx'`, `'../lib/api.ts'`).

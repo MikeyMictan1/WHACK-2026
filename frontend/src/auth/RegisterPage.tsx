@@ -10,7 +10,7 @@ export function RegisterPage() {
   const { user, register } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = (location.state as { from?: string } | null)?.from ?? '/profile'
+  const from = (location.state as { from?: string } | null)?.from ?? '/dashboard'
 
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
@@ -31,6 +31,7 @@ export function RegisterPage() {
       await register({
         username: String(form.get('username')),
         password,
+        display_name: String(form.get('display_name') ?? '').trim() || undefined,
       })
       navigate(from, { replace: true })
     } catch (err) {
@@ -42,10 +43,11 @@ export function RegisterPage() {
 
   return (
     <AuthLayout
-      title="Create account."
-      aside="Passwords are hashed with Argon2 before they reach the database."
+      title="Parents start here."
+      aside="Sign up as a parent. You create and manage your kids' accounts from your dashboard."
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
+        <TextField label="Your name" name="display_name" autoComplete="name" hint="Optional" maxLength={40} />
         <TextField
           label="Username"
           name="username"
@@ -63,7 +65,7 @@ export function RegisterPage() {
         />
         <FormError message={error} />
         <Button type="submit" disabled={pending} className="w-full">
-          {pending ? 'Creating account…' : 'Create account'}
+          {pending ? 'Creating account…' : 'Create parent account'}
         </Button>
       </form>
 

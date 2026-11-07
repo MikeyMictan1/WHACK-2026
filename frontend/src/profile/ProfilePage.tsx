@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
+import { nameOf } from '../auth/types.ts'
 import { useAuth } from '../auth/useAuth.ts'
 import { PageHeader } from '../components/layout/PageHeader.tsx'
 import { Button } from '../components/ui/Button.tsx'
@@ -31,13 +32,14 @@ export function ProfilePage() {
 
   const rows = [
     ['Username', user.username],
+    ['Account type', user.role === 'parent' ? 'Parent' : 'Child (managed by your parent)'],
     ['Member since', new Date(user.created_at).toLocaleDateString(undefined, { dateStyle: 'long' })],
     ['User ID', String(user.id)],
   ] as const
 
   return (
     <>
-      <PageHeader marker="Account" title={user.username} />
+      <PageHeader marker="Account" title={nameOf(user)} />
 
       <section className="container-x py-10 md:py-14">
         <dl className="border-t border-ink">

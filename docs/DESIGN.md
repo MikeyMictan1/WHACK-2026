@@ -20,9 +20,12 @@ spend it on rewards, and watch their credit score react. Claude explains what th
 
 ## 2. Users and accounts
 
-1. **Parent:** email and password login. Owns the family and one or more kids.
-2. **Child:** created by a parent. Signs in with the NFC card (or a PIN as fallback). Age 10 to 18.
-3. Auth is the existing cookie JWT. A child session is limited to child pages.
+1. **Parent:** signs up with username and password. Owns one or more kids. *(Built)*
+2. **Child:** created, edited and removed by their parent on the parent dashboard. Logs in on the
+   same login page with the username and password (min 4 characters) the parent set. Age 10 to 18.
+   NFC card login to follow. *(Built, except NFC)*
+3. Auth is the existing cookie JWT. One `user` table with `role` and `parent_id`; parent-only
+   endpoints return 403 to a child session.
 
 ## 3. Parent dashboard
 
@@ -32,7 +35,9 @@ spend it on rewards, and watch their credit score react. Claude explains what th
 4. **Controls per child:**
    - Weekly allowance amount and payday
    - Starting credit limit
-   - Which credit cards the child can access
+   - Which credit cards the child can access: parent picks the allowed set (for example 2 to
+     start with, pre-selected by age so it's one tap to accept), and the child chooses between
+     them at first login
    - Rewards: in-game, weekly, milestones (parent sets prices and IRL rewards)
    - Chores and extracurriculars, with payouts and bonuses
    - Feature toggles (age-based presets)
@@ -52,6 +57,23 @@ Matches the designer's mocks.
 4. **Monthly review:** AI summary, new credit score, updated plan (interest, limit), "Change plan?".
 5. **Change plan:** lists cards the parent allows, with a "Negotiate?" button leading to the AI chat.
 6. **Decor:** owned items can be placed in left and right screen sections.
+7. **Learn:** info pages about credit (see 4.1). Linked from the nav, from the score on Home,
+   and from the monthly review.
+
+### 4.1 Info pages ("Learn more about credit")
+
+Static pages, short and friendly, written for ages 10 to 18. No AI needed to render them.
+
+1. What is credit?
+2. Credit score: what it is and the three things that move it (payment history, utilisation, history length)
+3. APR and interest: why borrowing costs money, with a worked example
+4. Statements: balance, minimum payment, due date, what happens if you're late
+5. Utilisation: why using less of your limit is better
+6. Choosing a card: what rewards, limits and fees mean (and why the Loan Shark is a trap)
+7. Glossary: short definitions the UI and AI link to
+
+Each page ends with a "Try it" link to the matching dashboard section. Parents get the same pages
+under their dashboard. Content lives in one file in the frontend (`learn/content.ts`), no database.
 
 ## 5. Purchase flow
 
@@ -105,7 +127,7 @@ Uses the existing `ai_controller.get_client()`. Keep all prompts short, friendly
    summary for parents.
 2. **Negotiation bot:** when switching cards, the kid negotiates APR with a seller bot. Bot
    knows the score and the card's terms. Outcome is bounded by backend rules, not by the model.
-3. **Buddy (optional):** explains terms. **What-if slider (optional):** backend computes pay-minimum vs
+3. **Buddy (optional):** explains terms and links to the matching info page. **What-if slider (optional):** backend computes pay-minimum vs
    pay-in-full, Claude narrates it.
 4. **Safety:** parents can read transcripts, bots stay on topic, no real advice or real products.
 

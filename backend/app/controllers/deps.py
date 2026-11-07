@@ -33,3 +33,12 @@ def get_current_user_or_none(request: Request, session: SessionDep) -> User | No
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def get_current_parent(user: CurrentUser) -> User:
+    if user.role != "parent":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only parent accounts can do this")
+    return user
+
+
+CurrentParent = Annotated[User, Depends(get_current_parent)]
