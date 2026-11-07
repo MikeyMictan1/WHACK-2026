@@ -140,6 +140,18 @@ Troubleshooting: "refused the token" means the two `BRIDGE_TOKEN`s differ. "HTTP
 the URL is wrong or the site is down. Only one bridge is used at a time; a new one replaces the old.
 The site's `/api/nfc/status` shows `"via": "bridge"` while it's connected.
 
+### Phones: tapping and notifications
+
+- **Tap the card on an Android phone** (Chrome, on the HTTPS site, NFC switched on): the pay screen,
+  the plan-switch confirm and the login page show "Tap card on this phone". It reads the card's ID,
+  so it works for paying, switching plans and logging in by card; "Log out with NFC" needs the reader.
+  Use NTAG215/216 cards (MIFARE Classic often won't read on phones). iPhones can't do this.
+- **Phone notifications**: on the dashboard, "Phone notifications → Turn on" (then "Send a test").
+  Parents get one when a kid asks to buy something or finishes a chore; kids when a purchase is
+  approved or denied. Android Chrome: works straight away. iPhone (iOS 16.4+): Share → Add to Home
+  Screen, open Whack from the home screen, then turn it on there. Nothing to configure on Railway:
+  the push keys are created in the database on first use.
+
 Check a build locally without Docker: `npm run build --prefix frontend`, then in Git Bash from
 `backend/`: `FRONTEND_DIST=../frontend/dist uv run fastapi run app/main.py --port 8011` and open
 http://127.0.0.1:8011.

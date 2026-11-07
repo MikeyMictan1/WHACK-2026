@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, status
 from sqlmodel import Session, col, select
 
 from app.controllers.deps import CurrentParent, CurrentUser
-from app.controllers.nfc_controller import require_own_card, wait_for_card_tap
+from app.controllers.nfc_controller import phone_tap_uid, require_own_card, wait_for_card_tap
 from app.core.config import settings
 from app.core.database import SessionDep
 from app.models.shop import (
@@ -35,6 +35,8 @@ from app.models.shop import (
     utcnow,
     weekly_available_again,
 )
+from app.models.pricing import money
+from app.models.push import notify
 from app.models.led import ensure_skin_rewards, owned_skins, skin_for_reward
 from app.models.user import User, get_child, list_children
 
@@ -198,6 +200,7 @@ def request_purchase(data: PurchaseRequestCreate, user: CurrentUser, session: Se
     session.add(req)
     session.commit()
     session.refresh(req)
+    notify(child.parent_id, f"{_name(child)} wants {req.title}", f"{money(req.price)}. Open Whack to approve or say no.")
     return _public(session, req)
 
 
@@ -235,6 +238,10 @@ def _decide(request_id: int, parent: User, session: Session, new_status: str) ->
     session.add(req)
     session.commit()
     session.refresh(req)
+    if new_status == "approved":
+        notify(req.child_id, "Approved!", f"Tap your card to buy {req.title}.", "/shop")
+    else:
+        notify(req.child_id, "Not this time", f"Your parent said no to {req.title}.", "/shop")
     return _public(session, req)
 
 
@@ -267,9 +274,12 @@ _taps_lock = threading.Lock()
 
 
 @router.post("/requests/{request_id}/pay", response_model=PurchaseRequestPublic)
-def pay(request_id: int, user: CurrentUser, session: SessionDep, simulate: bool = False) -> PurchaseRequestPublic:
+def pay(
+    request_id: int, user: CurrentUser, session: SessionDep, simulate: bool = False, card_uid: str | None = None
+) -> PurchaseRequestPublic:
     """Wait (up to 30 s) for the child to tap their card on the reader, then take the money.
 
+    `card_uid=...` is a card the child tapped on their Android phone (Web NFC): no waiting.
     `simulate=true` skips the card (no reader at hand, or demo backup).
     """
     child = _require_child(user)
@@ -281,6 +291,11 @@ def pay(request_id: int, user: CurrentUser, session: SessionDep, simulate: bool 
     if simulate:
         if not settings.allow_simulated_tap:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Simulated taps are turned off")
+    elif card_uid:
+        with _taps_lock:  # stop a reader wait still running for this request
+            if old := _pending_taps.get(request_id):
+                old.set()
+        require_own_card(session, child.id, phone_tap_uid(card_uid))
     else:
         cancel_flag = threading.Event()
         with _taps_lock:

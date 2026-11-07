@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     # Lets "Simulate tap" stand in for a real NFC tap (shop purchases, plan switches). Off for a real deployment.
     allow_simulated_tap: bool = True
 
+    # Android phones can read the card themselves (Chrome Web NFC) and send its id. The browser
+    # reports the id, so it can't prove a physical tap the way a reader can: fine for play money.
+    allow_phone_tap: bool = True
+
+    # Contact the push services (Google/Apple) can reach about our notifications (Web Push "sub").
+    push_subject: str = "mailto:whack-demo@example.com"
+
     # Laptop bridge (python -m app.bridge): lets a deployed backend use the NFC reader and LED board
     # plugged into a laptop. Same token on both sides; empty disables the bridge endpoint.
     bridge_token: str = ""

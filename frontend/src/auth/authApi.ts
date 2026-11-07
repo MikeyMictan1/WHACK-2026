@@ -8,6 +8,8 @@ export const authApi = {
   logout: () => api<void>('/auth/logout', { method: 'POST' }),
   /** Reads the NFC card on the reader and logs in as its owner. */
   loginWithCard: () => api<User>('/nfc/login', { method: 'POST' }),
+  /** Logs in as the child a card belongs to, from a card tapped on this phone (Web NFC). */
+  loginWithPhoneCard: (uid: string) => api<User>('/nfc/login/phone', { method: 'POST', json: { uid } }),
   /** Waits (up to 60s) for a NEW card tap, moves the user's data onto it, then logs out. */
   logoutWithNfc: (signal?: AbortSignal) =>
     api<{ bytes_used: number; capacity: number }>('/nfc/logout', { method: 'POST', signal }),

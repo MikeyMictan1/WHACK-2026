@@ -33,6 +33,7 @@ from contextlib import contextmanager
 
 from fastapi import APIRouter, HTTPException, Request, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
 from app.controllers.auth_controller import _set_auth_cookie
 from app.controllers.deps import CurrentChild, CurrentUser, get_current_user_or_none
@@ -68,6 +69,16 @@ def wait_for_card_tap(cancel: threading.Event, timeout: float) -> str:
     if uid is None:
         raise HTTPException(status.HTTP_408_REQUEST_TIMEOUT, "The card was lifted too fast. Tap again.")
     return normalize_uid(uid)
+
+
+def phone_tap_uid(card_uid: str) -> str:
+    """A card id read by the phone (Web NFC, e.g. '04:a2:3b:...'), checked and normalised."""
+    if not settings.allow_phone_tap:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Tapping on a phone is turned off.")
+    uid = normalize_uid(card_uid)
+    if not 8 <= len(uid) <= 20 or any(c not in "0123456789ABCDEF" for c in uid):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "That doesn't look like a card id.")
+    return uid
 
 
 def require_own_card(session: SessionDep, child_id: int, uid: str) -> None:
@@ -251,6 +262,28 @@ def login_with_card(session: SessionDep, request: Request, response: Response) -
     user = get_user_by_id(session, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "This card belongs to an account that no longer exists.")
+    if user.role != "child":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Cards are for child accounts. Log in with your password.")
+    _set_auth_cookie(response, user)
+    return user
+
+
+class PhoneTapIn(BaseModel):
+    uid: str = Field(min_length=4, max_length=60)
+
+
+@router.post("/login/phone", response_model=UserPublic)
+def login_with_phone_tap(body: PhoneTapIn, session: SessionDep, request: Request, response: Response) -> User:
+    """Log in by tapping a linked card on an Android phone (nobody logged in). Child accounts only.
+
+    The phone can't read saved data ("Log out with NFC" is reader-only), so this logs in the child
+    the card is linked to."""
+    if get_current_user_or_none(request, session) is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Already logged in.")
+    child_id = child_for_card(session, phone_tap_uid(body.uid))
+    user = get_user_by_id(session, child_id) if child_id is not None else None
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "This card isn't linked to anyone yet. Log in and pay with it once to link it.")
     if user.role != "child":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Cards are for child accounts. Log in with your password.")
     _set_auth_cookie(response, user)

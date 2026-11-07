@@ -177,6 +177,17 @@ bridge's); card memory goes through `core/bridge_link.RemoteTag` (same surface a
 loop sends frames with `bridge.send_frame`. Use `nfc_controller._open_card()` for card memory, never
 `open_tag()` directly, so both readers work. Protocol is documented at the top of `core/bridge_link.py`.
 
+**Phone tap** (Android Chrome Web NFC, HTTPS only): `frontend/src/nfc/PhoneTapButton.tsx` reads the
+card's serial number and sends it as `card_uid` (pay, plan confirm) or to `POST /api/nfc/login/phone`.
+The backend runs it through `phone_tap_uid` + `require_own_card` like a reader tap. Reading the id only:
+"Log out with NFC" stays reader-only. `ALLOW_PHONE_TAP` turns it off. iPhones have no Web NFC.
+
+**Phone notifications** (Web Push): `models/push.py` (`notify(user_id, title, body, url)`, fire and
+forget), `push_controller.py`, `frontend/public/sw.js`, `frontend/src/push/` (`PushToggle` on both
+dashboards). VAPID keys are generated into the DB on first use (no settings needed). Sent on: purchase
+requested and chore claimed (parent), request approved/denied (child). iPhone needs the site added to
+the home screen first (`manifest.webmanifest`).
+
 Cards belong to child accounts, and a tap only acts when a screen asks for one: pay, switch plan,
 "Log out with NFC", or log in (nobody logged in). Every screen that waits for a tap calls
 `nfc_controller.wait_for_card_tap` (marks the tap used so it can't also log in) and

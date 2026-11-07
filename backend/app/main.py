@@ -19,6 +19,7 @@ from app.controllers import (
     negotiation_controller,
     nfc_controller,
     plans_controller,
+    push_controller,
     shop_controller,
     vault_controller,
 )
@@ -60,6 +61,7 @@ for controller in (
     plans_controller,
     negotiation_controller,
     nfc_controller,
+    push_controller,
     shop_controller,
     vault_controller,
 ):

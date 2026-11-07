@@ -3,11 +3,12 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { Button } from '../components/ui/Button.tsx'
 import { FormError } from '../components/ui/FormError.tsx'
 import { TextField } from '../components/ui/TextField.tsx'
+import { PhoneTapButton } from '../nfc/PhoneTapButton.tsx'
 import { AuthLayout } from './AuthLayout.tsx'
 import { useAuth } from './useAuth.ts'
 
 export function LoginPage() {
-  const { user, login } = useAuth()
+  const { user, login, loginWithPhoneCard } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from ?? '/dashboard'
@@ -51,6 +52,17 @@ export function LoginPage() {
           {pending ? 'Logging in…' : 'Log in'}
         </Button>
       </form>
+
+      <PhoneTapButton
+        label="Kids: log in with your card on this phone"
+        className="mt-4 w-full"
+        disabled={pending}
+        onError={setError}
+        onTap={async (uid) => {
+          await loginWithPhoneCard(uid)
+          navigate(from, { replace: true })
+        }}
+      />
 
       <p className="mt-8 border-t border-line pt-6 text-sm text-muted">
         Parent without an account?{' '}

@@ -17,7 +17,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel, Field
 
 from app.controllers.deps import CurrentChild
-from app.controllers.nfc_controller import require_own_card, wait_for_card_tap
+from app.controllers.nfc_controller import phone_tap_uid, require_own_card, wait_for_card_tap
 from app.controllers.plans_controller import CurrentPlan, current_plan
 from app.core import led_feedback, seller_bot
 from app.core.config import settings
@@ -76,6 +76,7 @@ class SayIn(BaseModel):
 
 class ConfirmIn(BaseModel):
     simulate: bool = False
+    card_uid: str | None = Field(default=None, max_length=60)  # tapped on an Android phone (Web NFC)
 
 
 class ConfirmOut(BaseModel):
@@ -252,6 +253,9 @@ def confirm(session_id: int, body: ConfirmIn, child: CurrentChild, db: SessionDe
         if body.simulate:
             if not settings.allow_simulated_tap:
                 raise HTTPException(status.HTTP_403_FORBIDDEN, "Simulated taps are turned off.")
+        elif body.card_uid:
+            _cancel_wait(neg.id or 0)
+            require_own_card(db, child.id, phone_tap_uid(body.card_uid))
         else:
             uid = _wait_for_tap(neg.id or 0)
             require_own_card(db, child.id, uid)

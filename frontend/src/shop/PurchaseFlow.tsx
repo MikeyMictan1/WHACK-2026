@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '../components/ui/Button.tsx'
 import { FormError } from '../components/ui/FormError.tsx'
 import { formatMoney } from '../lib/money.ts'
+import { PhoneTapButton } from '../nfc/PhoneTapButton.tsx'
 import { shopApi, type PurchaseRequest } from './shopApi.ts'
 
 const POLL_MS = 2000
@@ -84,6 +85,19 @@ export function PurchaseFlow({ request, onClose, onChange }: Props) {
     }
   }
 
+  /** The child tapped their card on this phone (Android Web NFC). */
+  async function phoneTap(cardUid: string) {
+    stopWaitingForTap()
+    setTapError(null)
+    setBusy(true)
+    try {
+      setReq(await shopApi.pay(req.id, false, undefined, cardUid))
+      changed.current()
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function cancelPurchase() {
     stopWaitingForTap()
     setBusy(true)
@@ -105,7 +119,7 @@ export function PurchaseFlow({ request, onClose, onChange }: Props) {
     approved: {
       step: 'Step 2 of 2',
       title: tapError ? 'That didn’t work' : 'Tap your card',
-      body: 'Approved. Hold your card on the reader to pay. If it is already there, lift it and tap again.',
+      body: 'Approved. Hold your card on the reader to pay (lift it and tap again if it is already there), or tap it on the back of this phone.',
     },
     paid: { step: 'Done', title: 'Bought.', body: `${req.title} is yours. ${formatMoney(req.price)} came out of your balance.` },
     denied: { step: 'Not this time', title: 'Your parent said no', body: 'Nothing was paid. Maybe try something else.' },
@@ -154,6 +168,7 @@ export function PurchaseFlow({ request, onClose, onChange }: Props) {
                   Try again
                 </Button>
               )}
+              <PhoneTapButton disabled={busy} onError={setTapError} onTap={phoneTap} />
               <Button variant="light" className="border border-ink" onClick={simulateTap} disabled={busy}>
                 Simulate tap
               </Button>

@@ -10,6 +10,8 @@ export type AuthState = {
   logout: () => Promise<void>
   /** Log in with the NFC card currently on the reader. */
   loginWithCard: () => Promise<User>
+  /** Log in with a card tapped on this phone (Android Web NFC). */
+  loginWithPhoneCard: (uid: string) => Promise<User>
 }
 
 export const AuthContext = createContext<AuthState | null>(null)

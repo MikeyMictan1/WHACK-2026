@@ -4,6 +4,7 @@ import { PageHeader } from '../components/layout/PageHeader.tsx'
 import { ButtonLink } from '../components/ui/Button.tsx'
 import { Skeleton } from '../components/ui/Skeleton.tsx'
 import { formatMoney } from '../lib/money.ts'
+import { PushToggle } from '../push/PushToggle.tsx'
 import { shopApi, type Wallet } from '../shop/shopApi.ts'
 
 /** The child's home: balance, ways to spend and earn, recent transactions. Credit comes later. */
@@ -34,6 +35,10 @@ export function ChildDashboard({ child }: { child: User }) {
               Earn money
             </ButtonLink>
           </div>
+        </div>
+
+        <div className="mt-10">
+          <PushToggle what="when your parent approves what you want to buy" />
         </div>
 
         <h2 className="mt-14 border-b border-ink pb-3 text-d3 font-light">Recent transactions</h2>
