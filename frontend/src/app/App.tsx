@@ -7,6 +7,7 @@ import { FrontPage } from '../front-page/FrontPage.tsx'
 import { AiFeaturePage } from '../ai-feature/AiFeaturePage.tsx'
 import { ProfilePage } from '../profile/ProfilePage.tsx'
 import { DashboardPage } from '../dashboard/DashboardPage.tsx'
+import { AddChildPage } from '../dashboard/AddChildPage.tsx'
 import { ShopPage } from '../shop/ShopPage.tsx'
 import { EarnPage } from '../earn/EarnPage.tsx'
 import { ManageShopPage } from '../manage/ManageShopPage.tsx'
@@ -42,6 +43,14 @@ export function App() {
           element={
             <RequireAuth>
               <DashboardPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="dashboard/children/new"
+          element={
+            <RequireAuth>
+              <AddChildPage />
             </RequireAuth>
           }
         />
