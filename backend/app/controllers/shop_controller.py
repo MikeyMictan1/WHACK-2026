@@ -7,6 +7,7 @@ Children: browse their parent's rewards, request one, pay by tapping their NFC c
 import threading
 
 from fastapi import APIRouter, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.controllers.deps import CurrentParent, CurrentUser
@@ -32,6 +33,7 @@ from app.models.shop import (
     expire_if_stale,
     expires_in,
     open_request_for,
+    set_status_if,
     utcnow,
     weekly_available_again,
 )
@@ -230,9 +232,11 @@ def _decide(request_id: int, parent: User, session: Session, new_status: str) ->
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Only a parent can decide this")
     if req.status != "pending":
         raise HTTPException(status.HTTP_409_CONFLICT, f"This request is already {req.status}")
-    req.status = new_status
-    req.decided_at = utcnow()
-    session.add(req)
+    assert req.id is not None
+    if not set_status_if(session, req.id, ("pending",), new_status, decided_at=utcnow()):
+        session.rollback()
+        session.refresh(req)  # the child cancelled, or it expired, while we were deciding
+        raise HTTPException(status.HTTP_409_CONFLICT, f"This request is already {req.status}")
     session.commit()
     session.refresh(req)
     return _public(session, req)
@@ -253,8 +257,11 @@ def cancel(request_id: int, user: CurrentUser, session: SessionDep) -> PurchaseR
     req = _request_for(session, user, request_id)
     if req.status not in OPEN_STATUSES:
         raise HTTPException(status.HTTP_409_CONFLICT, f"This request is already {req.status}")
-    req.status = "cancelled"
-    session.add(req)
+    assert req.id is not None
+    if not set_status_if(session, req.id, OPEN_STATUSES, "cancelled"):
+        session.rollback()
+        session.refresh(req)  # it was paid (or decided) a moment ago: a paid purchase can't be cancelled
+        raise HTTPException(status.HTTP_409_CONFLICT, f"This request is already {req.status}")
     session.commit()
     session.refresh(req)
     return _public(session, req)
@@ -298,14 +305,25 @@ def pay(request_id: int, user: CurrentUser, session: SessionDep, simulate: bool 
     session.refresh(req)  # the parent could have changed it while we waited
     if req.status != "approved":
         raise HTTPException(status.HTTP_409_CONFLICT, f"This purchase is {req.status}")
+
+    # Win the purchase first. One UPDATE decides, so if the child's taps, retries or double clicks reach
+    # us together, exactly one gets to charge. The others find it already paid and stop here.
+    assert req.id is not None
+    try:
+        won = set_status_if(session, req.id, ("approved",), "paid", paid_at=utcnow())
+    except IntegrityError:  # two first taps racing to link the same card: the other one got there first
+        won = False
+    if not won:
+        session.rollback()
+        session.refresh(req)
+        raise HTTPException(status.HTTP_409_CONFLICT, f"This purchase is {req.status}")
+    # Still inside the same transaction: if they cannot afford it, leaving here undoes the claim above.
     if balance_of(session, child.id) < req.price:
+        session.rollback()
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "You don't have enough money for this any more")
 
     add_entry(session, child_id=child.id, amount=-req.price, kind="purchase", description=req.title)
-    req.status = "paid"
-    req.paid_at = utcnow()
-    session.add(req)
-    session.commit()
+    session.commit()  # the status, the money and (on a first tap) the card link land together
     session.refresh(req)
     return _public(session, req)
 
