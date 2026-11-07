@@ -1,3 +1,5 @@
+from typing import Any
+
 import anthropic
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -39,17 +41,17 @@ def get_ai_status() -> dict[str, str]:
     return {"feature": "ai", "status": f"{MODEL} ready" if configured else "no API key set"}
 
 
-@router.post("/chat")
-def chat(body: ChatRequest) -> ChatResponse:
+def call_claude(**kwargs: Any) -> anthropic.types.Message:
+    """One Claude call with the project's model and error mapping. Pass system, messages, tools, ...
+
+    Raises HTTPException (503 no key, 429, 502) so callers can either let it through to the
+    browser or catch it and fall back.
+    """
     client = get_client()
+    kwargs.setdefault("max_tokens", 2048)
+    kwargs.setdefault("output_config", {"effort": "low"})
     try:
-        response = client.messages.create(
-            model=MODEL,
-            max_tokens=2048,
-            system=SYSTEM_PROMPT,
-            output_config={"effort": "low"},
-            messages=[{"role": "user", "content": body.message}],
-        )
+        return client.messages.create(model=MODEL, **kwargs)
     except anthropic.AuthenticationError:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Invalid Anthropic API key.")
     except anthropic.RateLimitError:
@@ -58,6 +60,11 @@ def chat(body: ChatRequest) -> ChatResponse:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Claude API error ({e.status_code}).")
     except anthropic.APIConnectionError:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Could not reach the Claude API.")
+
+
+@router.post("/chat")
+def chat(body: ChatRequest) -> ChatResponse:
+    response = call_claude(system=SYSTEM_PROMPT, messages=[{"role": "user", "content": body.message}])
 
     if response.stop_reason == "refusal":
         return ChatResponse(reply="Sorry, I can't help with that request.")

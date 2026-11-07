@@ -102,6 +102,22 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
 `nfc_controller.nfc_events` (FastAPI `StreamingResponse`) and read it with `fetch` streaming or
 `EventSource` on the frontend. Use the claude-api skill for model IDs and API details.
 
+## Change plan and negotiation
+
+Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plans_controller`) ->
+`/plans/:cardId/negotiate` (`negotiation_controller`) -> accept -> tap card (or "Simulate tap" in dev)
+-> plan switched. Money is integer hundredths of a Whack Coin (WC, play money; shown as "40.00 WC"), APR is integer basis points (2499 = 24.99%).
+
+- Numbers are the backend's: `models/pricing.py` computes the floor APR from score, payment streak and
+  utilisation, and `clamp_offer` limits every bot offer (down to the floor in steps; up by 1 point per rude message, at most 3 points over the listed APR). The bot (`core/seller_bot.py`) never sees the
+  floor; it calls a `make_offer` tool and is told what was recorded. The UI shows the recorded offer.
+- `models/card.py` seeds the five cards and holds `CreditProfile`, a stand-in for the child's score,
+  balance and current plan (created with demo values on first use). Replace `get_profile` when the real
+  score and statements exist.
+- If Claude is unreachable the scripted bot in `seller_bot.py` takes over so the demo still runs.
+- `core/led_feedback.py` fills a bar on the LED grid as the discount grows; it is best effort.
+- `ALLOW_SIMULATED_TAP` (config) enables the dev-only simulate button on the confirm screen.
+
 ## Hardware
 
 **NFC** (ACR122U reader via PC/SC, `pyscard`): `core/nfc_card.py` reads/writes raw tag memory

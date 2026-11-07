@@ -28,7 +28,8 @@ export function ChildDashboard({ child }: { child: User }) {
           ))}
         </dl>
 
-        <div className="mt-10">
+        <div className="mt-10 flex flex-wrap gap-3">
+          <ButtonLink to="/review">Monthly review</ButtonLink>
           <ButtonLink to="/profile" variant="light" className="border border-ink">
             Account and log out
           </ButtonLink>
