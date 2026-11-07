@@ -14,9 +14,11 @@ bridging, so only one program talks to the reader.
 import argparse
 import asyncio
 import json
+import ssl
 import threading
 from urllib.parse import quote
 
+import certifi
 from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import ConnectionClosed, InvalidStatus
 
@@ -188,7 +190,11 @@ async def run(url: str, token: str) -> None:
     log(f"connecting to {url} ...")
     while True:
         try:
-            async with connect(_ws_url(url, token), ping_interval=20, max_size=2**20, open_timeout=15) as ws:
+            ws_url = _ws_url(url, token)
+            # certifi's CA list, not the OS store: an expired root in the Windows store can make
+            # Python reject a valid certificate (seen with Railway's Let's Encrypt chain).
+            tls = ssl.create_default_context(cafile=certifi.where()) if ws_url.startswith("wss://") else None
+            async with connect(ws_url, ssl=tls, ping_interval=20, max_size=2**20, open_timeout=15) as ws:
                 log("connected. Taps on this reader now reach the site. Ctrl+C to stop.")
                 delay = 1
                 tasks = [
