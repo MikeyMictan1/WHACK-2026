@@ -12,6 +12,7 @@ Purchase flow (PurchaseRequest.status):
 from datetime import datetime, timedelta
 from typing import Literal
 
+from sqlalchemy import update
 from sqlmodel import Field, Session, SQLModel, col, func, select
 
 from app.models.clock import site_now
@@ -192,6 +193,22 @@ def add_entry(session: Session, *, child_id: int, amount: int, kind: EntryKind, 
     session.add(LedgerEntry(child_id=child_id, amount=amount, kind=kind, description=description[:120]))
 
 
+def set_status_if(session: Session, request_id: int, expected: tuple[str, ...], new_status: str, **values: object) -> bool:
+    """Change a purchase's status only if it still has one of the `expected` statuses.
+
+    Returns True if this call made the change. It is a single UPDATE, so when several requests race for the
+    same purchase (a double click, a tap and a simulated tap, a retry) exactly one of them wins. Always use
+    this instead of reading the status and assigning a new one. It does not commit; the caller does. The
+    object in the session is stale afterwards, so `session.refresh` it.
+    """
+    result = session.exec(  # type: ignore[call-overload]
+        update(PurchaseRequest)
+        .where(col(PurchaseRequest.id) == request_id, col(PurchaseRequest.status).in_(expected))
+        .values(status=new_status, **values)
+    )
+    return result.rowcount == 1
+
+
 def _expires_at(req: PurchaseRequest) -> datetime:
     """The clock restarts when the parent approves, so the child always gets the full time to tap."""
     start = req.decided_at if req.status == "approved" and req.decided_at else req.created_at
@@ -201,8 +218,9 @@ def _expires_at(req: PurchaseRequest) -> datetime:
 def expire_if_stale(session: Session, req: PurchaseRequest) -> PurchaseRequest:
     """Requests left pending or approved too long expire. Called whenever one is read."""
     if req.status in OPEN_STATUSES and utcnow() > _expires_at(req):
-        req.status = "expired"
-        session.add(req)
+        # Only if nobody moved it on meanwhile (approved, paid, cancelled): expire exactly the state we judged.
+        assert req.id is not None
+        set_status_if(session, req.id, (req.status,), "expired")
         session.commit()
         session.refresh(req)
     return req
