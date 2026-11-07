@@ -90,9 +90,9 @@ export const STATUS_LABEL: Record<StatementStatus, string> = {
 /** Child endpoints return 403 for a parent; the skip and overview endpoints return 403 for a child. */
 export const creditApi = {
   get: () => api<CreditSummary>('/credit'),
-  /** Waits up to 30 s for a card tap on the reader. `simulate` skips the card. */
-  pay: (amount: number, simulate: boolean, signal?: AbortSignal) =>
-    api<PayResult>('/credit/payments', { method: 'POST', json: { amount, simulate }, signal }),
+  /** Waits up to 30 s for a card tap on the reader. `simulate` skips the card; `cardUid` is a card tapped on this phone. */
+  pay: (amount: number, simulate: boolean, signal?: AbortSignal, cardUid?: string) =>
+    api<PayResult>('/credit/payments', { method: 'POST', json: { amount, simulate, card_uid: cardUid ?? null }, signal }),
   cancelPay: () => api<void>('/credit/payments/cancel', { method: 'POST' }),
   children: () => api<ChildCredit[]>('/credit/children'),
   skipMonth: (childId: number) => api<SkipResult>(`/credit/children/${childId}/skip-month`, { method: 'POST' }),

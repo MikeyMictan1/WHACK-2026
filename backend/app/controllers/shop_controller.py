@@ -7,12 +7,29 @@ Children: browse their parent's rewards, request one, pay by tapping their NFC c
 import threading
 
 from fastapi import APIRouter, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 
 from app.controllers.deps import CurrentParent, CurrentUser
-from app.controllers.nfc_controller import hub
+from app.controllers.nfc_controller import (
+    phone_tap_uid,
+    require_own_card,
+    wait_for_card_tap,
+)
 from app.core.config import settings
 from app.core.database import SessionDep
+from app.models.card import get_card, get_profile
+from app.models.credit import (
+    CreditEntry,
+    available_credit,
+    aware,
+    charge_purchase,
+    is_credit,
+    purchase_block_reason,
+)
+from app.models.led import ensure_skin_rewards, owned_skins, skin_for_reward
+from app.models.pricing import money
+from app.models.push import notify
 from app.models.shop import (
     OPEN_STATUSES,
     BonusCreate,
@@ -32,19 +49,10 @@ from app.models.shop import (
     expire_if_stale,
     expires_in,
     open_request_for,
+    set_status_if,
     utcnow,
     weekly_available_again,
 )
-from app.models.card import get_card, get_profile
-from app.models.credit import (
-    CreditEntry,
-    aware,
-    available_credit,
-    charge_purchase,
-    is_credit,
-    purchase_block_reason,
-)
-from app.models.led import ensure_skin_rewards, owned_skins, skin_for_reward
 from app.models.user import User, get_child, list_children
 
 router = APIRouter(prefix="/shop", tags=["shop"])
@@ -229,6 +237,7 @@ def request_purchase(data: PurchaseRequestCreate, user: CurrentUser, session: Se
     session.add(req)
     session.commit()
     session.refresh(req)
+    notify(child.parent_id, f"{_name(child)} wants {req.title}", f"{money(req.price)}. Open Whack to approve or say no.")
     return _public(session, req)
 
 
@@ -261,11 +270,17 @@ def _decide(request_id: int, parent: User, session: Session, new_status: str) ->
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Only a parent can decide this")
     if req.status != "pending":
         raise HTTPException(status.HTTP_409_CONFLICT, f"This request is already {req.status}")
-    req.status = new_status
-    req.decided_at = utcnow()
-    session.add(req)
+    assert req.id is not None
+    if not set_status_if(session, req.id, ("pending",), new_status, decided_at=utcnow()):
+        session.rollback()
+        session.refresh(req)  # the child cancelled, or it expired, while we were deciding
+        raise HTTPException(status.HTTP_409_CONFLICT, f"This request is already {req.status}")
     session.commit()
     session.refresh(req)
+    if new_status == "approved":
+        notify(req.child_id, "Approved!", f"Tap your card to buy {req.title}.", "/shop")
+    else:
+        notify(req.child_id, "Not this time", f"Your parent said no to {req.title}.", "/shop")
     return _public(session, req)
 
 
@@ -284,8 +299,11 @@ def cancel(request_id: int, user: CurrentUser, session: SessionDep) -> PurchaseR
     req = _request_for(session, user, request_id)
     if req.status not in OPEN_STATUSES:
         raise HTTPException(status.HTTP_409_CONFLICT, f"This request is already {req.status}")
-    req.status = "cancelled"
-    session.add(req)
+    assert req.id is not None
+    if not set_status_if(session, req.id, OPEN_STATUSES, "cancelled"):
+        session.rollback()
+        session.refresh(req)  # it was paid (or decided) a moment ago: a paid purchase can't be cancelled
+        raise HTTPException(status.HTTP_409_CONFLICT, f"This request is already {req.status}")
     session.commit()
     session.refresh(req)
     return _public(session, req)
@@ -297,22 +315,13 @@ _pending_taps: dict[int, threading.Event] = {}  # request id -> cancel flag
 _taps_lock = threading.Lock()
 
 
-def _check_card(session: Session, child_id: int, uid: str) -> None:
-    """The card must be this child's. A child's first card, if unused, is linked to them."""
-    link = session.get(CardLink, uid)
-    if link is not None:
-        if link.child_id != child_id:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "That card belongs to someone else")
-        return
-    if session.exec(select(CardLink).where(CardLink.child_id == child_id)).first():
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "That isn't your card. Tap the card you paid with before.")
-    session.add(CardLink(uid=uid, child_id=child_id))
-
-
 @router.post("/requests/{request_id}/pay", response_model=PurchaseRequestPublic)
-def pay(request_id: int, user: CurrentUser, session: SessionDep, simulate: bool = False) -> PurchaseRequestPublic:
+def pay(
+    request_id: int, user: CurrentUser, session: SessionDep, simulate: bool = False, card_uid: str | None = None
+) -> PurchaseRequestPublic:
     """Wait (up to 30 s) for the child to tap their card on the reader, then take the money.
 
+    `card_uid=...` is a card the child tapped on their Android phone (Web NFC): no waiting.
     `simulate=true` skips the card (no reader at hand, or demo backup).
     """
     child = _require_child(user)
@@ -320,48 +329,62 @@ def pay(request_id: int, user: CurrentUser, session: SessionDep, simulate: bool 
     req = _request_for(session, child, request_id)
     if req.status != "approved":
         raise HTTPException(status.HTTP_409_CONFLICT, "This purchase isn't approved yet")
+    profile = get_profile(session, child.id)  # before the tap: making a new profile commits
 
     if simulate:
         if not settings.allow_simulated_tap:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Simulated taps are turned off")
+    elif card_uid:
+        with _taps_lock:  # stop a reader wait still running for this request
+            if old := _pending_taps.get(request_id):
+                old.set()
+        require_own_card(session, child.id, phone_tap_uid(card_uid))
     else:
-        if hub.reader_name is None:
-            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "No card reader connected. Use Simulate tap.")
         cancel_flag = threading.Event()
         with _taps_lock:
             if old := _pending_taps.get(request_id):
                 old.set()
             _pending_taps[request_id] = cancel_flag
         try:
-            seq = hub.wait_for_tap(hub.tap_seq, cancel_flag, TAP_TIMEOUT_SECONDS)
+            uid = wait_for_card_tap(cancel_flag, TAP_TIMEOUT_SECONDS)
         finally:
             with _taps_lock:
                 if _pending_taps.get(request_id) is cancel_flag:
                     del _pending_taps[request_id]
-        if seq is None or hub.current_uid is None:
-            raise HTTPException(status.HTTP_408_REQUEST_TIMEOUT, "No card tapped. Try again.")
-        _check_card(session, child.id, hub.current_uid)
+        require_own_card(session, child.id, uid)
 
     session.refresh(req)  # the parent could have changed it while we waited
     if req.status != "approved":
         raise HTTPException(status.HTTP_409_CONFLICT, f"This purchase is {req.status}")
-    profile = get_profile(session, child.id)
-    session.refresh(profile)  # we may have waited a while for the tap
+
+    # Win the purchase first. One UPDATE decides, so if the child's taps, retries or double clicks reach
+    # us together, exactly one gets to charge. The others find it already paid and stop here.
+    assert req.id is not None
+    on_credit = False
+    try:
+        session.refresh(profile)  # we may have waited a while for the tap (this flushes a new card link)
+        on_credit = is_credit(profile)
+        won = set_status_if(
+            session, req.id, ("approved",), "paid", paid_at=utcnow(), paid_with="credit" if on_credit else "balance"
+        )
+    except IntegrityError:  # two first taps racing to link the same card: the other one got there first
+        won = False
+    if not won:
+        session.rollback()
+        session.refresh(req)
+        raise HTTPException(status.HTTP_409_CONFLICT, f"This purchase is {req.status}")
+    # Still inside the same transaction: if they cannot afford it, leaving here undoes the claim above.
     if reason := purchase_block_reason(session, profile, req.price, at_tap=True):
+        session.rollback()
         raise HTTPException(status.HTTP_400_BAD_REQUEST, reason)
 
-    if is_credit(profile):
+    if on_credit:
         card = get_card(session, profile.current_card_id)
         assert card is not None
         charge_purchase(session, profile, card, req.price, req.title)
-        req.paid_with = "credit"
     else:
         add_entry(session, child_id=child.id, amount=-req.price, kind="purchase", description=req.title)
-        req.paid_with = "balance"
-    req.status = "paid"
-    req.paid_at = utcnow()
-    session.add(req)
-    session.commit()
+    session.commit()  # the status, the money and (on a first tap) the card link land together
     session.refresh(req)
     return _public(session, req)
 

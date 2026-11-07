@@ -11,6 +11,25 @@ export const CARD_TYPE_OPTIONS = [
   { value: 'calicco_credit', label: 'CaliccoCredit' },
 ] as const
 
+export type CardTypeValue = (typeof CARD_TYPE_OPTIONS)[number]['value']
+
+/** What each age preset turns on. Custom lets the parent pick these themselves. */
+export const PRESET_SETTINGS: Record<
+  (typeof APP_EXPERIENCE_PRESETS)[number],
+  { creditScore: boolean; cardTypes: readonly CardTypeValue[] }
+> = {
+  '10+': { creditScore: false, cardTypes: ['deer_debit'] },
+  '13+': { creditScore: false, cardTypes: ['deer_debit', 'shark_father', 'calicco_credit'] },
+  '15+': { creditScore: true, cardTypes: CARD_TYPE_OPTIONS.map((c) => c.value) },
+}
+
+/** Whether credit score tracking is on: from the preset, or ticked under Custom. */
+export function creditScoreEnabled(appExperience: string | null) {
+  if (!appExperience) return false
+  if (appExperience in PRESET_SETTINGS) return PRESET_SETTINGS[appExperience as keyof typeof PRESET_SETTINGS].creditScore
+  return appExperience.split(',').includes('credit_score')
+}
+
 /** Something the child can order each week. `cost` is in minor units (1/100 WC). */
 export type WeeklyItemInput = {
   name: string

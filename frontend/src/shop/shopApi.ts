@@ -96,8 +96,12 @@ export const shopApi = {
   deny: (id: number) => api<PurchaseRequest>(`/shop/requests/${id}/deny`, { method: 'POST' }),
   cancel: (id: number) => api<PurchaseRequest>(`/shop/requests/${id}/cancel`, { method: 'POST' }),
   /** Waits up to 30 s for a card tap on the reader. `simulate` skips the card. */
-  pay: (id: number, simulate = false, signal?: AbortSignal) =>
-    api<PurchaseRequest>(`/shop/requests/${id}/pay${simulate ? '?simulate=true' : ''}`, { method: 'POST', signal }),
+  /** Waits for a reader tap; `simulate` skips the card; `cardUid` is a card tapped on this phone. */
+  pay: (id: number, simulate = false, signal?: AbortSignal, cardUid?: string) =>
+    api<PurchaseRequest>(
+      `/shop/requests/${id}/pay${simulate ? '?simulate=true' : cardUid ? `?card_uid=${encodeURIComponent(cardUid)}` : ''}`,
+      { method: 'POST', signal },
+    ),
   cancelPay: (id: number) => api<void>(`/shop/requests/${id}/pay/cancel`, { method: 'POST' }),
 
   chores: () => api<Chore[]>('/chores'),

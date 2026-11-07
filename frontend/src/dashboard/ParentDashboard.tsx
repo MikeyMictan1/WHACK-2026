@@ -11,6 +11,7 @@ import { shopApi } from '../shop/shopApi.ts'
 import { ChildForm } from './ChildForm.tsx'
 import { APP_EXPERIENCE_PRESETS, childrenApi, type Child } from './childrenApi.ts'
 import { ParentApprovals } from './ParentApprovals.tsx'
+import { PushToggle } from '../push/PushToggle.tsx'
 
 /** The parent's home: their kids' accounts, and adding / editing / removing them. */
 export function ParentDashboard({ parent }: { parent: User }) {
@@ -86,6 +87,10 @@ export function ParentDashboard({ parent }: { parent: User }) {
 
       <section className="container-x py-10 md:py-14">
         {children && children.length > 0 && <ParentApprovals onChange={loadBalances} />}
+
+        <div className="mb-10">
+          <PushToggle what="when your kids ask to buy something or finish a chore" />
+        </div>
 
         <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink pb-4">
           <h2 className="text-d3 font-light tracking-[-0.02em]">Your kids</h2>

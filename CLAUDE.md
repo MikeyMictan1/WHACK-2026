@@ -93,6 +93,15 @@ AI. The old paths redirect.
 - **Accounts:** one `user` table with `role` = `parent` | `child`. `/auth/register` only creates
   parents; children are created by their parent via `/api/children` (`parent_id` set) and log in
   on the normal login page. Use `CurrentParent` for parent-only endpoints.
+- **Admin:** a third role, `admin`, is one built-in account (`ADMIN_USERNAME`/`ADMIN_PASSWORD`,
+  default `admin` / `admin-change-me`). Nothing can register it; `init_db()` calls `ensure_admin()` on
+  every start, which recreates it if missing and resets its role and password. A `before_delete` hook
+  on `User` refuses to delete it. Use `CurrentAdmin` for admin-only endpoints.
+- **Site clock** (`models/clock.py`, `/api/clock`): the site's own "now" = real time + whatever the
+  admin added (a day, week or calendar month; reset drops the additions). **The whole site runs on it:**
+  never call `datetime.now()` in app code, use `site_now()` (or `shop.utcnow()`, which wraps it). The
+  only real-time clocks are security ones: JWT expiry (`core/security.py`) and the NFC card save stamp.
+  The LED clock/date skins add `site_offset()` to local time.
 - **Play money** (`models/shop.py`, `shop_controller`, `chores_controller`): amounts are integer
   pence; balance = sum of `LedgerEntry` rows (never store a balance column). Purchase requests go
   `pending -> approved -> paid`; `/shop/requests/{id}/pay` blocks up to 30 s waiting for a tap on
@@ -125,12 +134,16 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
 
 - A child on a credit card spends on the card: `shop_controller.pay` calls `charge_purchase` instead of taking
   money from the ledger, and declines over the limit. On Debit it still takes the child's own balance.
+  The purchase is claimed first with `set_status_if` (race-safe), then charged in the same transaction.
+- Statement payments (`POST /api/credit/payments`) take a tap like purchases: reader or laptop bridge
+  (`wait_for_card_tap`), a phone tap (`card_uid`), or `simulate`.
 - `CreditProfile.balance` (what is owed) changes only through `credit.post_entry`, together with a
   `CreditEntry`. Never edit it directly. Functions in `models/credit.py` never commit; the caller does, so a
   purchase or payment and its ledger entries succeed or fail together.
 - Each child has their own clock (`CreditProfile.sim_now`). Only the parent's "Skip a month"
   (`advance_month`, `POST /api/credit/children/{id}/skip-month`) moves it: 4 weeks, 4 allowances, the due date
   passes, interest and any late fee, a new `Statement`. Statements are due 14 days after they are issued.
+  This is separate from the admin's site clock (`models/clock.py`, `site_now()`), which the shop uses.
 - The seeded cards follow DESIGN.md 6.1 (`models/card.py`). The score is still a placeholder.
 - A child can change plan once a month (`switch_locked_reason`); Plans and the negotiation both check it.
 
@@ -173,12 +186,37 @@ Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plan
 
 **NFC** (ACR122U reader via PC/SC, `pyscard`): `core/nfc_card.py` reads/writes raw tag memory
 (NTAG21x, Ultralight, MIFARE Classic 1K); all access must hold `card_lock` because a background
-poller shares the reader. `controllers/nfc_controller.py` runs that poller (started in
-`main.lifespan`) and pushes `hello`/`reader`/`card`/`card_removed` events over SSE at
-`/api/nfc/events`; `frontend/src/nfc/useNfc.ts` consumes them. "Log out with NFC" moves the user's
-vault (`models/vault.py`) onto the card, AES-GCM encrypted with the card UID as associated data
-and a one-time save id; tapping the card while logged out logs in and moves it back. Changing
-`NFC_SECRET`/`JWT_SECRET` makes existing cards unreadable.
+poller shares the reader. `core/nfc_hub.py` (`NfcHub`, started in `main.lifespan`) polls a local
+reader; `controllers/nfc_controller.py` pushes `hello`/`reader`/`card`/`card_removed` events over
+SSE at `/api/nfc/events`; `frontend/src/nfc/useNfc.ts` consumes them.
+
+**Laptop bridge** (deployed site): `backend/app/bridge.py` (`npm run bridge`, needs `BRIDGE_URL` +
+`BRIDGE_TOKEN`) runs on the laptop with the reader/board and connects to the WebSocket
+`/api/nfc/bridge`. Its taps feed the same `NfcHub` (`hub.reader_name` = local reader, else the
+bridge's); card memory goes through `core/bridge_link.RemoteTag` (same surface as `Tag`), and the LED
+loop sends frames with `bridge.send_frame`. Use `nfc_controller._open_card()` for card memory, never
+`open_tag()` directly, so both readers work. Protocol is documented at the top of `core/bridge_link.py`.
+
+**Phone tap** (Android Chrome Web NFC, HTTPS only): `frontend/src/nfc/PhoneTapButton.tsx` reads the
+card's serial number and sends it as `card_uid` (pay, plan confirm) or to `POST /api/nfc/login/phone`.
+The backend runs it through `phone_tap_uid` + `require_own_card` like a reader tap. Reading the id only:
+"Log out with NFC" stays reader-only. `ALLOW_PHONE_TAP` turns it off. iPhones have no Web NFC.
+
+**Phone notifications** (Web Push): `models/push.py` (`notify(user_id, title, body, url)`, fire and
+forget), `push_controller.py`, `frontend/public/sw.js`, `frontend/src/push/` (`PushToggle` on both
+dashboards). VAPID keys are generated into the DB on first use (no settings needed). Sent on: purchase
+requested and chore claimed (parent), request approved/denied (child). iPhone needs the site added to
+the home screen first (`manifest.webmanifest`).
+
+Cards belong to child accounts, and a tap only acts when a screen asks for one: pay, switch plan,
+"Log out with NFC", or log in (nobody logged in). Every screen that waits for a tap calls
+`nfc_controller.wait_for_card_tap` (marks the tap used so it can't also log in) and
+`require_own_card` (`models/shop.check_card`: the card must be the child's; their first card gets
+linked in `CardLink`). Card UIDs are stored via `normalize_uid` (upper hex, no separators).
+"Log out with NFC" moves the child's vault (`models/vault.py`) onto their card, AES-GCM encrypted
+with the card UID as associated data and a one-time save id. Tapping while logged out restores a
+saved vault if the card has one, otherwise logs in the child the card is linked to. Changing
+`NFC_SECRET`/`JWT_SECRET` makes existing card saves unreadable.
 
 **LED matrix** (Pimoroni Stellar Unicorn 16x16 on a Pico 2 W, USB serial): `core/unicorn.py` finds
 the board by USB VID, Ctrl-C's whatever runs, starts `whack_grid.run()`, then sends line commands

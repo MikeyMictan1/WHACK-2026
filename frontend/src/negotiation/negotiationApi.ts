@@ -52,7 +52,8 @@ export const negotiationApi = {
   accept: (id: number) => api<NegotiationSession>(`/negotiations/${id}/accept`, { method: 'POST' }),
   walkAway: (id: number) => api<NegotiationSession>(`/negotiations/${id}/walk-away`, { method: 'POST' }),
   /** Waits for a card tap (up to a minute). `simulate` skips the tap in dev builds. */
-  confirm: (id: number, simulate: boolean) =>
-    api<ConfirmResult>(`/negotiations/${id}/confirm`, { method: 'POST', json: { simulate } }),
+  /** Waits for a reader tap; `simulate` skips the card; `cardUid` is a card tapped on this phone. */
+  confirm: (id: number, simulate: boolean, cardUid?: string) =>
+    api<ConfirmResult>(`/negotiations/${id}/confirm`, { method: 'POST', json: { simulate, card_uid: cardUid ?? null } }),
   cancelConfirm: (id: number) => api<void>(`/negotiations/${id}/confirm/cancel`, { method: 'POST' }),
 }

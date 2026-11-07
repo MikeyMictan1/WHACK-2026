@@ -5,6 +5,7 @@ import { ButtonLink } from '../components/ui/Button.tsx'
 import { Skeleton } from '../components/ui/Skeleton.tsx'
 import { creditApi, formatDate, type CreditSummary } from '../credit/creditApi.ts'
 import { formatMoney } from '../lib/money.ts'
+import { PushToggle } from '../push/PushToggle.tsx'
 import { shopApi, type Wallet } from '../shop/shopApi.ts'
 
 /** The child's home: balance, their card, ways to spend and earn, recent transactions. */
@@ -40,6 +41,10 @@ export function ChildDashboard({ child }: { child: User }) {
         </div>
 
         {credit && <CardGlance credit={credit} />}
+
+        <div className="mt-10">
+          <PushToggle what="when your parent approves what you want to buy" />
+        </div>
 
         <h2 className="mt-14 border-b border-ink pb-3 text-d3 font-light">Recent transactions</h2>
         {!wallet && <Skeleton className="mt-4 h-14 w-full" />}

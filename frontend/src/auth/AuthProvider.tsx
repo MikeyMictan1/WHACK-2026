@@ -38,7 +38,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return u
   }
 
+  const loginWithPhoneCard = async (uid: string) => {
+    const u = await authApi.loginWithPhoneCard(uid)
+    setUser(u)
+    return u
+  }
+
   return (
-    <AuthContext value={{ user, loading, login, register, logout, loginWithCard }}>{children}</AuthContext>
+    <AuthContext value={{ user, loading, login, register, logout, loginWithCard, loginWithPhoneCard }}>
+      {children}
+    </AuthContext>
   )
 }

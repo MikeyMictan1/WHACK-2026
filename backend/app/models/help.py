@@ -1,8 +1,10 @@
 """Everything the AI helper was asked and answered, so a parent can read it later (DESIGN.md section 9)."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlmodel import Field, SQLModel
+
+from app.models.clock import site_now
 
 
 class HelpMessage(SQLModel, table=True):
@@ -12,4 +14,4 @@ class HelpMessage(SQLModel, table=True):
     question: str
     answer: str
     scripted: bool = False  # True if the offline fallback answered
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=lambda: site_now())  # site clock

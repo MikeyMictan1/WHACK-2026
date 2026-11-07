@@ -89,3 +89,69 @@ The backend stays on 127.0.0.1; Vite's proxy calls it from the laptop. Login wor
 (common at venues): use the phone's hotspot and join the laptop to it.
 
 To test two accounts on one machine, use a normal window plus an incognito window (cookies are per profile).
+
+## Deploying (Railway)
+
+The whole app is one Docker image (`Dockerfile` at the repo root): the React build is served by
+FastAPI, so the site and `/api` share one origin and the auth cookie works as is. `railway.json`
+tells Railway to use it, health-check `/api/health` and run a single instance (tap waits and the
+NFC/LED state live in that one process, so don't scale it out).
+
+One-time setup:
+
+1. railway.app → sign in with GitHub → New Project → Deploy from GitHub repo → `WHACK-2026`.
+   Pick the branch to deploy (Settings → Source). Every push to it redeploys.
+2. Service → **Volumes** → add a volume mounted at `/data`. The database lives there
+   (`sqlite:////data/app.db`); without the volume every deploy wipes all accounts.
+3. Service → **Variables**:
+   - `JWT_SECRET`: a long random string (keep it stable: changing it logs everyone out and makes
+     data saved on NFC cards unreadable)
+   - `ANTHROPIC_API_KEY`: the Claude key
+   - `ADMIN_PASSWORD`: **must change.** The default (`admin-change-me`) is public in this repo, and
+     the admin can move the site clock and see every family. `ADMIN_USERNAME` too, if you like.
+   - `ALLOW_SIMULATED_TAP=true` (keeps the simulate button as a backup when no reader is connected)
+   - `BRIDGE_TOKEN`: a long random string, so a laptop can connect its NFC reader and LED board
+     (see "Laptop bridge" below). Without it the bridge is switched off.
+   - Already set by the Dockerfile: `DATABASE_URL`, `FRONTEND_DIST`, `COOKIE_SECURE=true`
+4. Service → Settings → Networking → **Generate Domain**. That's the public HTTPS link.
+
+The server in the cloud has no reader or LED board of its own. Run the laptop bridge to lend it
+yours; without the bridge, taps use "Simulate tap" and the LED Home page still shows the live grid.
+
+### Laptop bridge (NFC reader + LED board for the deployed site)
+
+`backend/app/bridge.py` runs on the laptop the ACR122U and/or the LED board are plugged into. It
+connects to the site over a WebSocket (`/api/nfc/bridge`) and keeps reconnecting if it drops:
+taps go up to the site, card reads/writes ("Log out with NFC", tap to log in) and LED frames come
+down. Every screen that asks for a tap works as if the reader were plugged into the server.
+
+1. Railway → Variables: set `BRIDGE_TOKEN` (generate one in Git Bash:
+   `python -c "import secrets; print(secrets.token_urlsafe(32))"`). Railway redeploys.
+2. On the laptop, add to `backend/.env`:
+   ```
+   BRIDGE_URL=https://<your-app>.up.railway.app
+   BRIDGE_TOKEN=<the same token>
+   ```
+3. Stop the local backend (`scripts/backend-stop`) so only one program talks to the reader, then
+   from the repo root (any shell): `npm run bridge`. It prints `connected`, the reader name and
+   whether it found the LED board. Leave it running during the demo.
+
+Troubleshooting: "refused the token" means the two `BRIDGE_TOKEN`s differ. "HTTP 404/502" means
+the URL is wrong or the site is down. Only one bridge is used at a time; a new one replaces the old.
+The site's `/api/nfc/status` shows `"via": "bridge"` while it's connected.
+
+### Phones: tapping and notifications
+
+- **Tap the card on an Android phone** (Chrome, on the HTTPS site, NFC switched on): the pay screen,
+  the plan-switch confirm and the login page show "Tap card on this phone". It reads the card's ID,
+  so it works for paying, switching plans and logging in by card; "Log out with NFC" needs the reader.
+  Use NTAG215/216 cards (MIFARE Classic often won't read on phones). iPhones can't do this.
+- **Phone notifications**: on the dashboard, "Phone notifications → Turn on" (then "Send a test").
+  Parents get one when a kid asks to buy something or finishes a chore; kids when a purchase is
+  approved or denied. Android Chrome: works straight away. iPhone (iOS 16.4+): Share → Add to Home
+  Screen, open Whack from the home screen, then turn it on there. Nothing to configure on Railway:
+  the push keys are created in the database on first use.
+
+Check a build locally without Docker: `npm run build --prefix frontend`, then in Git Bash from
+`backend/`: `FRONTEND_DIST=../frontend/dist uv run fastapi run app/main.py --port 8011` and open
+http://127.0.0.1:8011.

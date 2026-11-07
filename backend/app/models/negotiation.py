@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlmodel import Field, Session, SQLModel, select
 
+from app.models.clock import site_now
 from app.models.card import Card, CreditProfile, allowed_ids
 from app.models.pricing import blocked_reason, ceiling_apr_bp, clamp_offer
 
@@ -18,7 +19,7 @@ EXPIRY = timedelta(minutes=30)
 
 
 def _now() -> datetime:
-    return datetime.now(UTC)
+    return site_now()  # the site clock, not real time
 
 
 # ---- Tables ----------------------------------------------------------------

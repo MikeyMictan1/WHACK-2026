@@ -14,6 +14,8 @@ from app.models.shop import (
     add_entry,
     utcnow,
 )
+from app.models.pricing import money
+from app.models.push import notify
 from app.models.user import User, list_children
 
 router = APIRouter(prefix="/chores", tags=["chores"])
@@ -95,6 +97,11 @@ def claim_chore(chore_id: int, user: CurrentUser, session: SessionDep) -> ChoreC
     session.add(claim)
     session.commit()
     session.refresh(claim)
+    notify(
+        user.parent_id,
+        f"{user.display_name or user.username} did: {chore.title}",
+        f"Open Whack to approve and pay {money(chore.amount)}.",
+    )
     return _claim_public(session, claim)
 
 

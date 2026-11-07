@@ -17,8 +17,12 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, col, select
 
 from app.controllers.deps import CurrentChild, CurrentParent
-from app.controllers.nfc_controller import hub
-from app.controllers.shop_controller import TAP_TIMEOUT_SECONDS, _check_card
+from app.controllers.nfc_controller import (
+    phone_tap_uid,
+    require_own_card,
+    wait_for_card_tap,
+)
+from app.controllers.shop_controller import TAP_TIMEOUT_SECONDS
 from app.core.config import settings
 from app.core.database import SessionDep
 from app.models.card import Card, get_card, get_profile
@@ -117,6 +121,7 @@ class CreditSummary(BaseModel):
 class PayIn(BaseModel):
     amount: int = Field(ge=1, le=100_000_000)  # minor units
     simulate: bool = False
+    card_uid: str | None = Field(default=None, max_length=60)  # tapped on an Android phone (Web NFC)
 
 
 class PayOut(BaseModel):
@@ -234,23 +239,24 @@ def pay(body: PayIn, child: CurrentChild, session: SessionDep) -> PayOut:
     if body.simulate:
         if not settings.allow_simulated_tap:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Simulated taps are turned off")
+    elif body.card_uid:
+        with _waiting_lock:  # stop a reader wait still running for this child
+            if old := _waiting.get(child.id):
+                old.set()
+        require_own_card(session, child.id, phone_tap_uid(body.card_uid))
     else:
-        if hub.reader_name is None:
-            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "No card reader connected. Use Simulate tap.")
         cancel_flag = threading.Event()
         with _waiting_lock:
             if old := _waiting.get(child.id):
                 old.set()
             _waiting[child.id] = cancel_flag
         try:
-            seq = hub.wait_for_tap(hub.tap_seq, cancel_flag, TAP_TIMEOUT_SECONDS)
+            uid = wait_for_card_tap(cancel_flag, TAP_TIMEOUT_SECONDS)
         finally:
             with _waiting_lock:
                 if _waiting.get(child.id) is cancel_flag:
                     del _waiting[child.id]
-        if seq is None or hub.current_uid is None:
-            raise HTTPException(status.HTTP_408_REQUEST_TIMEOUT, "No card tapped. Try again.")
-        _check_card(session, child.id, hub.current_uid)
+        require_own_card(session, child.id, uid)
 
     session.refresh(profile)  # we may have waited a while
     try:

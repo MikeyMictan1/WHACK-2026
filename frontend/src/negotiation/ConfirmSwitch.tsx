@@ -3,6 +3,7 @@ import { Button } from '../components/ui/Button.tsx'
 import { FormError } from '../components/ui/FormError.tsx'
 import { money, pct } from '../lib/format.ts'
 import { ApiError } from '../lib/api.ts'
+import { PhoneTapButton } from '../nfc/PhoneTapButton.tsx'
 import { negotiationApi, type ConfirmResult, type CostLine, type NegotiationSession } from './negotiationApi.ts'
 
 type Props = {
@@ -86,6 +87,13 @@ export function ConfirmSwitch({ session, onConfirmed, onBack }: Props) {
       ) : (
         <div className="mt-4 flex flex-wrap gap-3">
           <Button onClick={() => confirm(false)}>Confirm with card tap</Button>
+          <PhoneTapButton
+            onError={setError}
+            onTap={async (uid) => {
+              setError(null)
+              onConfirmed(await negotiationApi.confirm(session.id, false, uid))
+            }}
+          />
           {import.meta.env.DEV && (
             <Button variant="light" className="border border-ink" onClick={() => confirm(true)}>
               Simulate tap (dev)

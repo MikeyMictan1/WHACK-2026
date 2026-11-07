@@ -1,15 +1,18 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Literal
 
 from pydantic import field_validator
+from sqlalchemy import event
 from sqlmodel import Field, Session, SQLModel, select
 
+from app.models.clock import site_now
 from app.models.milestone import MilestoneInput, MilestonePublic
 from app.models.weekly_item import WeeklyItemInput, WeeklyItemPublic
 
 USERNAME_PATTERN = r"^[a-zA-Z0-9_.-]{3,32}$"
 
-Role = Literal["parent", "child"]
+# "admin" is never created through the API: ensure_admin() seeds the single admin at startup.
+Role = Literal["parent", "child", "admin"]
 
 
 # ---- Table -----------------------------------------------------------------
@@ -26,7 +29,14 @@ class User(SQLModel, table=True):
     weekly_allowance: int | None = None  # children only, minor units (1/100 WC)
     app_experience: str | None = Field(default=None, max_length=20)  # children only
     card_type: str | None = Field(default=None, max_length=100)  # children only: comma-separated
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=lambda: site_now())
+
+
+@event.listens_for(User, "before_delete")
+def _keep_admin(_mapper: object, _connection: object, target: User) -> None:
+    """The admin account can't be deleted through the app."""
+    if target.role == "admin":
+        raise ValueError("The admin account can't be deleted")
 
 
 # ---- Schemas (API input / output) -----------------------------------------
@@ -129,6 +139,32 @@ def create_user(
         app_experience=app_experience,
         card_type=card_type,
     )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
+def ensure_admin(session: Session, username: str, password: str) -> User:
+    """Make sure the built-in admin exists with this username, role and password. Runs at startup,
+    so the account comes back if it was removed from the database by hand."""
+    from app.core.security import hash_password, verify_password
+
+    user = get_user_by_username(session, username)
+    if user is None:
+        user = User(username=username.lower(), hashed_password=hash_password(password), role="admin")
+    else:
+        # Also covers someone having registered the admin username before this existed.
+        user.role = "admin"
+        user.parent_id = None
+        try:
+            password_ok = verify_password(password, user.hashed_password)
+        except Exception:  # unreadable hash (edited by hand): just reset it
+            password_ok = False
+        if not password_ok:
+            user.hashed_password = hash_password(password)
+    if user.display_name is None:
+        user.display_name = "Admin"
     session.add(user)
     session.commit()
     session.refresh(user)

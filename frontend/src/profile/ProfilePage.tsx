@@ -32,7 +32,10 @@ export function ProfilePage() {
 
   const rows = [
     ['Username', user.username],
-    ['Account type', user.role === 'parent' ? 'Parent' : 'Child (managed by your parent)'],
+    [
+      'Account type',
+      user.role === 'admin' ? 'Admin (built in)' : user.role === 'parent' ? 'Parent' : 'Child (managed by your parent)',
+    ],
     ['Member since', new Date(user.created_at).toLocaleDateString(undefined, { dateStyle: 'long' })],
     ['User ID', String(user.id)],
   ] as const
@@ -59,13 +62,17 @@ export function ProfilePage() {
           <Button onClick={onLogout} disabled={pending}>
             {pending ? 'Logging out…' : 'Log out'}
           </Button>
-          <Button variant="light" onClick={() => setNfcLogout(true)} disabled={pending} className="border border-ink">
-            Log out with NFC
-          </Button>
+          {user.role === 'child' && (
+            <Button variant="light" onClick={() => setNfcLogout(true)} disabled={pending} className="border border-ink">
+              Log out with NFC
+            </Button>
+          )}
         </div>
-        <p className="meta mt-3">
-          “Log out” keeps your data on our system. “Log out with NFC” moves it onto your card and removes it from ours.
-        </p>
+        {user.role === 'child' && (
+          <p className="meta mt-3">
+            “Log out” keeps your data on our system. “Log out with NFC” moves it onto your card and removes it from ours.
+          </p>
+        )}
 
         {nfcLogout && <NfcLogoutScreen onDone={onNfcLogoutDone} onBack={() => setNfcLogout(false)} />}
       </section>

@@ -14,6 +14,7 @@ import {
 } from '../credit/creditApi.ts'
 import { pct } from '../lib/format.ts'
 import { formatMoney, parseMoney } from '../lib/money.ts'
+import { PhoneTapButton } from '../nfc/PhoneTapButton.tsx'
 
 /**
  * /review: the child's card, the latest statement, and what to do about it.
@@ -238,14 +239,14 @@ function PayPanel({
   const toMinimum = Math.max(0, statement.minimum - statement.paid)
   const customAmount = parseMoney(custom)
 
-  async function pay(amount: number, simulate: boolean) {
+  async function pay(amount: number, simulate: boolean, cardUid?: string) {
     const id = ++attempt.current
     setError(null)
     setWaitingFor(amount)
     const c = new AbortController()
     ctrl.current = c
     try {
-      onPaid(await creditApi.pay(amount, simulate, c.signal))
+      onPaid(await creditApi.pay(amount, simulate, c.signal, cardUid))
       setCustom('')
     } catch (err) {
       if (!c.signal.aborted) setError((err as Error).message)
@@ -274,7 +275,16 @@ function PayPanel({
       <div className="mt-8 border border-ink bg-signal p-6">
         <p className="text-d4 font-medium">Tap your card on the reader to pay {formatMoney(waitingFor)}.</p>
         <p className="mt-1">Waiting for up to 30 seconds.</p>
+        <FormError message={error} />
         <div className="mt-5 flex flex-wrap gap-3">
+          <PhoneTapButton
+            onError={setError}
+            onTap={async (uid) => {
+              // The phone read the card: stop the reader wait and pay with this card instead.
+              ctrl.current?.abort()
+              await pay(waitingFor, false, uid)
+            }}
+          />
           {import.meta.env.DEV && (
             <Button variant="onAccent" onClick={() => simulate(waitingFor)}>
               Simulate tap (dev)
