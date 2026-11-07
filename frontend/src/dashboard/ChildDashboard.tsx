@@ -6,7 +6,7 @@ import { ButtonLink } from '../components/ui/Button.tsx'
 export function ChildDashboard({ child }: { child: User }) {
   const rows = [
     ['Username', `@${child.username}`],
-    ['Age', String(child.age ?? '')],
+    ['Weekly allowance', child.weekly_allowance != null ? `${child.weekly_allowance}p` : '—'],
     ['Account', 'Managed by your parent'],
   ] as const
 

@@ -1,4 +1,4 @@
-"""A parent's child accounts: list, create, edit (incl. password reset), delete."""
+"""A parent's child accounts: list, create, edit (incl. password reset and weekly items), delete."""
 
 from fastapi import APIRouter, HTTPException, status
 
@@ -7,15 +7,18 @@ from app.core.database import SessionDep
 from app.core.security import hash_password
 from app.models.user import (
     ChildCreate,
+    ChildPublic,
     ChildUpdate,
     User,
-    UserPublic,
     create_user,
     get_child,
     get_user_by_username,
     list_children,
 )
+
+from app.models.milestone import delete_milestones, list_milestones, replace_milestones
 from app.models.vault import Vault
+from app.models.weekly_item import delete_weekly_items, list_weekly_items, replace_weekly_items
 
 router = APIRouter(prefix="/children", tags=["children"])
 
@@ -28,40 +31,66 @@ def _own_child(session: SessionDep, parent: User, child_id: int) -> User:
     return child
 
 
-@router.get("", response_model=list[UserPublic])
-def my_children(parent: CurrentParent, session: SessionDep) -> list[User]:
+def _public(session: SessionDep, child: User) -> ChildPublic:
+    assert child.id is not None
+    return ChildPublic.model_validate(
+        {
+            **child.model_dump(),
+            "weekly_items": [i.model_dump() for i in list_weekly_items(session, child.id)],
+            "milestones": [m.model_dump() for m in list_milestones(session, child.id)],
+        }
+    )
+
+
+@router.get("", response_model=list[ChildPublic])
+def my_children(parent: CurrentParent, session: SessionDep) -> list[ChildPublic]:
     assert parent.id is not None
-    return list_children(session, parent.id)
+    return [_public(session, c) for c in list_children(session, parent.id)]
 
 
-@router.post("", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
-def add_child(data: ChildCreate, parent: CurrentParent, session: SessionDep) -> User:
+@router.post("", response_model=ChildPublic, status_code=status.HTTP_201_CREATED)
+def add_child(data: ChildCreate, parent: CurrentParent, session: SessionDep) -> ChildPublic:
     if get_user_by_username(session, data.username):
         raise HTTPException(status.HTTP_409_CONFLICT, "That username is taken")
-    return create_user(
+    child = create_user(
         session,
         username=data.username,
         hashed_password=hash_password(data.password),
         role="child",
         parent_id=parent.id,
         display_name=data.display_name.strip(),
-        age=data.age,
+        weekly_allowance=data.weekly_allowance,
+        app_experience=data.app_experience,
+        card_type=data.card_type,
     )
+    assert child.id is not None
+    replace_weekly_items(session, child.id, data.weekly_items)
+    replace_milestones(session, child.id, data.milestones)
+    session.commit()
+    return _public(session, child)
 
 
-@router.patch("/{child_id}", response_model=UserPublic)
-def update_child(child_id: int, data: ChildUpdate, parent: CurrentParent, session: SessionDep) -> User:
+@router.patch("/{child_id}", response_model=ChildPublic)
+def update_child(child_id: int, data: ChildUpdate, parent: CurrentParent, session: SessionDep) -> ChildPublic:
     child = _own_child(session, parent, child_id)
     if data.display_name is not None:
         child.display_name = data.display_name.strip()
-    if data.age is not None:
-        child.age = data.age
+    if data.weekly_allowance is not None:
+        child.weekly_allowance = data.weekly_allowance
+    if data.app_experience is not None:
+        child.app_experience = data.app_experience
+    if data.card_type is not None:
+        child.card_type = data.card_type
     if data.password is not None:
         child.hashed_password = hash_password(data.password)
+    if data.weekly_items is not None:
+        replace_weekly_items(session, child_id, data.weekly_items)
+    if data.milestones is not None:
+        replace_milestones(session, child_id, data.milestones)
     session.add(child)
     session.commit()
     session.refresh(child)
-    return child
+    return _public(session, child)
 
 
 @router.delete("/{child_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -69,5 +98,7 @@ def delete_child(child_id: int, parent: CurrentParent, session: SessionDep) -> N
     child = _own_child(session, parent, child_id)
     if vault := session.get(Vault, child.id):
         session.delete(vault)
+    delete_weekly_items(session, child_id)
+    delete_milestones(session, child_id)
     session.delete(child)
     session.commit()

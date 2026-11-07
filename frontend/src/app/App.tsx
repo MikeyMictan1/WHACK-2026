@@ -9,6 +9,7 @@ import { Feature2Page } from '../feature-2/Feature2Page.tsx'
 import { AiFeaturePage } from '../ai-feature/AiFeaturePage.tsx'
 import { ProfilePage } from '../profile/ProfilePage.tsx'
 import { DashboardPage } from '../dashboard/DashboardPage.tsx'
+import { AddChildPage } from '../dashboard/AddChildPage.tsx'
 import { NotFoundPage } from '../not-found/NotFoundPage.tsx'
 import { PrivacyPage } from '../legal/PrivacyPage.tsx'
 import { TermsPage } from '../legal/TermsPage.tsx'
@@ -28,6 +29,14 @@ export function App() {
           element={
             <RequireAuth>
               <DashboardPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="dashboard/children/new"
+          element={
+            <RequireAuth>
+              <AddChildPage />
             </RequireAuth>
           }
         />

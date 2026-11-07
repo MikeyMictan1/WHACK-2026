@@ -4,11 +4,12 @@ from typing import Literal
 from pydantic import field_validator
 from sqlmodel import Field, Session, SQLModel, select
 
+from app.models.milestone import MilestoneInput, MilestonePublic
+from app.models.weekly_item import WeeklyItemInput, WeeklyItemPublic
+
 USERNAME_PATTERN = r"^[a-zA-Z0-9_.-]{3,32}$"
 
 Role = Literal["parent", "child"]
-MIN_CHILD_AGE = 10
-MAX_CHILD_AGE = 18
 
 
 # ---- Table -----------------------------------------------------------------
@@ -22,7 +23,9 @@ class User(SQLModel, table=True):
     role: str = Field(default="parent", index=True)  # Role
     parent_id: int | None = Field(default=None, foreign_key="user.id", index=True)
     display_name: str | None = Field(default=None, max_length=40)
-    age: int | None = None  # children only
+    weekly_allowance: int | None = None  # children only, in pence
+    app_experience: str | None = Field(default=None, max_length=20)  # children only
+    card_type: str | None = Field(default=None, max_length=100)  # children only: comma-separated
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -52,8 +55,17 @@ class UserPublic(SQLModel):
     role: str
     parent_id: int | None
     display_name: str | None
-    age: int | None
+    weekly_allowance: int | None
+    app_experience: str | None
+    card_type: str | None
     created_at: datetime
+
+
+class ChildPublic(UserPublic):
+    """A child as their parent sees it, with the weekly items they can order."""
+
+    weekly_items: list[WeeklyItemPublic] = []
+    milestones: list[MilestonePublic] = []
 
 
 class ChildCreate(SQLModel):
@@ -61,7 +73,11 @@ class ChildCreate(SQLModel):
     # Shorter minimum than parents so a kid can remember it (a PIN works).
     password: str = Field(min_length=4, max_length=128)
     display_name: str = Field(min_length=1, max_length=40)
-    age: int = Field(ge=MIN_CHILD_AGE, le=MAX_CHILD_AGE)
+    weekly_allowance: int = Field(ge=0)  # in pence
+    app_experience: str = Field(min_length=1, max_length=20)
+    card_type: str = Field(max_length=100)
+    weekly_items: list[WeeklyItemInput] = []
+    milestones: list[MilestoneInput] = []
 
     @field_validator("username")
     @classmethod
@@ -73,8 +89,12 @@ class ChildUpdate(SQLModel):
     """Every field optional; only the ones sent are changed."""
 
     display_name: str | None = Field(default=None, min_length=1, max_length=40)
-    age: int | None = Field(default=None, ge=MIN_CHILD_AGE, le=MAX_CHILD_AGE)
+    weekly_allowance: int | None = Field(default=None, ge=0)
+    app_experience: str | None = Field(default=None, min_length=1, max_length=20)
+    card_type: str | None = Field(default=None, max_length=100)
     password: str | None = Field(default=None, min_length=4, max_length=128)
+    weekly_items: list[WeeklyItemInput] | None = None  # replaces the whole list when sent
+    milestones: list[MilestoneInput] | None = None  # replaces the whole list when sent
 
 
 # ---- Data access -----------------------------------------------------------
@@ -95,7 +115,9 @@ def create_user(
     role: Role = "parent",
     parent_id: int | None = None,
     display_name: str | None = None,
-    age: int | None = None,
+    weekly_allowance: int | None = None,
+    app_experience: str | None = None,
+    card_type: str | None = None,
 ) -> User:
     user = User(
         username=username.lower(),
@@ -103,7 +125,9 @@ def create_user(
         role=role,
         parent_id=parent_id,
         display_name=display_name,
-        age=age,
+        weekly_allowance=weekly_allowance,
+        app_experience=app_experience,
+        card_type=card_type,
     )
     session.add(user)
     session.commit()
