@@ -26,7 +26,13 @@ def register(data: UserCreate, session: SessionDep, response: Response) -> User:
     if get_user_by_username(session, data.username):
         raise HTTPException(status.HTTP_409_CONFLICT, "That username is taken")
 
-    user = create_user(session, username=data.username, hashed_password=hash_password(data.password))
+    user = create_user(
+        session,
+        username=data.username,
+        hashed_password=hash_password(data.password),
+        role="parent",
+        display_name=(data.display_name or "").strip() or None,
+    )
     _set_auth_cookie(response, user)
     return user
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router'
+import { nameOf } from '../../auth/types.ts'
 import { useAuth } from '../../auth/useAuth.ts'
 import { Logo } from './Logo.tsx'
 import { NAV_LINKS } from './navigation.ts'
@@ -19,7 +20,7 @@ export function NavBar() {
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
 
-  const account = user ? { to: '/profile', label: user.username } : { to: '/login', label: 'Log in' }
+  const account = user ? { to: '/dashboard', label: nameOf(user) } : { to: '/login', label: 'Log in' }
 
   return (
     <header className="absolute inset-x-0 top-0 z-50 text-white">

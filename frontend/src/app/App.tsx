@@ -8,6 +8,7 @@ import { Feature1Page } from '../feature-1/Feature1Page.tsx'
 import { Feature2Page } from '../feature-2/Feature2Page.tsx'
 import { AiFeaturePage } from '../ai-feature/AiFeaturePage.tsx'
 import { ProfilePage } from '../profile/ProfilePage.tsx'
+import { DashboardPage } from '../dashboard/DashboardPage.tsx'
 import { NotFoundPage } from '../not-found/NotFoundPage.tsx'
 import { PrivacyPage } from '../legal/PrivacyPage.tsx'
 import { TermsPage } from '../legal/TermsPage.tsx'
@@ -22,6 +23,14 @@ export function App() {
         <Route path="ai" element={<AiFeaturePage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
+        <Route
+          path="dashboard"
+          element={
+            <RequireAuth>
+              <DashboardPage />
+            </RequireAuth>
+          }
+        />
         <Route
           path="profile"
           element={

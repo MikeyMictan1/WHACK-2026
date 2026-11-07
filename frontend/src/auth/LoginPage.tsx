@@ -10,7 +10,7 @@ export function LoginPage() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = (location.state as { from?: string } | null)?.from ?? '/profile'
+  const from = (location.state as { from?: string } | null)?.from ?? '/dashboard'
 
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
@@ -35,7 +35,7 @@ export function LoginPage() {
   return (
     <AuthLayout
       title="Log in."
-      aside="Your session lives in a secure, httpOnly cookie issued by the FastAPI backend."
+      aside="Parents and kids both log in here. Kids use the username and password their parent set up."
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
         <TextField label="Username" name="username" autoComplete="username" required />
@@ -53,7 +53,7 @@ export function LoginPage() {
       </form>
 
       <p className="mt-8 border-t border-line pt-6 text-sm text-muted">
-        No account yet?{' '}
+        Parent without an account?{' '}
         <Link to="/register" state={location.state} className="text-ink underline underline-offset-4">
           Create one
         </Link>

@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.controllers import (
     auth_controller,
+    children_controller,
     feature1_controller,
     feature2_controller,
     ai_controller,
@@ -39,6 +40,7 @@ api = APIRouter(prefix="/api")
 for controller in (
     health_controller,
     auth_controller,
+    children_controller,
     feature1_controller,
     feature2_controller,
     ai_controller,

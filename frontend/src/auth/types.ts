@@ -1,8 +1,22 @@
+export type Role = 'parent' | 'child'
+
 export type User = {
   id: number
   username: string
+  role: Role
+  /** Set on child accounts: the parent who manages them. */
+  parent_id: number | null
+  display_name: string | null
+  /** Children only. */
+  age: number | null
   created_at: string
 }
 
 export type LoginInput = { username: string; password: string }
-export type RegisterInput = LoginInput
+/** Sign-up always creates a parent account. */
+export type RegisterInput = LoginInput & { display_name?: string }
+
+/** The name to show for a user: their display name, else their username. */
+export function nameOf(user: Pick<User, 'display_name' | 'username'>) {
+  return user.display_name || user.username
+}
