@@ -12,6 +12,8 @@ The user is on Windows. Project scripts are bash and run from Git Bash at the re
 - `scripts/project-start` / `scripts/project-stop` / `scripts/project-restart` both servers in the background (also `scripts/frontend-*`, `scripts/backend-*`)
 - `scripts/dev.sh status frontend backend` shows what's up. Logs: `.run/frontend.log`, `.run/backend.log`
 - `npm run dev` runs both in the foreground; `npm run setup` installs everything (first time)
+- `npm run seed` adds demo accounts (parent `demo_parent`, kids `demo_kid` and `demo_teen`; logins in
+  `backend/app/seed.py`); `npm run seed:reset` erases all data first. Safe to repeat.
 - Frontend http://localhost:5173 · backend http://127.0.0.1:8000 · API docs http://127.0.0.1:8000/docs
 - Vite proxies `/api/*` to the backend, so the frontend always calls relative `/api/...` paths
 - Preview configs for the browser pane are in `.claude/launch.json` (`frontend`, `backend`, `dev`)
@@ -81,10 +83,13 @@ AI. The old paths redirect.
 
 ## Gotchas
 
-- **No migrations.** `init_db()` runs `SQLModel.metadata.create_all`, which creates missing tables
-  but never adds columns to existing ones. After adding or changing a column on an existing table,
-  stop the backend, delete `backend/app.db`, and start it again (this wipes users and data).
-  Tell the user when you do this.
+- **Schema upgrades are mostly automatic.** `init_db()` creates missing tables (`create_all`) and then
+  adds any columns an existing table is missing (`_add_missing_columns` in `core/database.py`), so
+  adding a field to a model just works and keeps existing data. It cannot rename, delete or retype a
+  column, or add a required column that has no default; it logs a warning at startup when it hits one
+  of those. Then run `npm run seed:reset` (erases every table, then re-adds the demo accounts) or stop
+  the backend and delete `backend/app.db`. Tell the user when you wipe data. Give new required columns
+  a default (`Field(default=...)`) so they can be added automatically.
 - **Accounts:** one `user` table with `role` = `parent` | `child`. `/auth/register` only creates
   parents; children are created by their parent via `/api/children` (`parent_id` set) and log in
   on the normal login page. Use `CurrentParent` for parent-only endpoints.

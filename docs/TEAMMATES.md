@@ -43,8 +43,8 @@ Backend and frontend hot-reload. Restart only after editing `backend/.env` or in
 ## 4. Working together
 
 - `git pull` before you start, commit small, push often.
-- The database (`backend/app.db`) is local and not committed. Everyone has their own users; register a new account on first run.
-- If you change a column on an existing table, stop the backend, delete `backend/app.db`, and start again (no migrations).
+- The database (`backend/app.db`) is local and not committed. Everyone has their own users. Run `npm run seed` to get demo accounts (`demo_parent` / `whack-demo-1`, kids `demo_kid` and `demo_teen` / `1234`), or register your own.
+- Adding a column to a model needs no action: the backend adds it to your existing database on startup. Renaming, deleting or retyping a column is not automatic (the backend logs a warning); run `npm run seed:reset` to wipe your local data and start fresh.
 - Add backend packages with `uv add <pkg> --directory backend`, frontend ones with `npm install <pkg> --prefix frontend`. Never pip.
 - Before pushing frontend work: `npm run build --prefix frontend` and `npm run lint --prefix frontend`.
 
