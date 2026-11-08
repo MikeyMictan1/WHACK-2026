@@ -12,21 +12,22 @@ import logo from '../assets/brand/logo-blue.png'
   turns slowly on its own, and you can drag it (with momentum) left or right.
 
   It shows the Teenacredit wordmark and the five cards a child can choose between, each in a
-  landscape white frame with its name underneath. Edit SLOTS to change what is on the ring.
+  landscape white frame. Edit SLOTS to change what is on the ring.
 
   Sizing: the card count, card size and ring radius are recomputed on resize (see fit()), so
   the nearest side cards always fit the height and the visible arc spans the width.
 */
 
-type Slot = { src: string; caption: string }
+/** `alt` is read out by screen readers; nothing is shown under the pictures. */
+type Slot = { src: string; alt: string }
 
 const SLOTS: Slot[] = [
-  { src: logo, caption: 'Teenacredit' },
-  { src: calicco, caption: 'CaliccoCredit, the starter card' },
-  { src: debit, caption: 'DeerDebit, your own money' },
-  { src: chip, caption: 'ChipOne, a step up' },
-  { src: venture, caption: 'Venture <W>, the best rewards' },
-  { src: shark, caption: 'The Shark Father. Mind the interest' },
+  { src: logo, alt: 'Teenacredit' },
+  { src: calicco, alt: 'CaliccoCredit, the starter card' },
+  { src: debit, alt: 'DeerDebit, your own money' },
+  { src: chip, alt: 'ChipOne, a step up' },
+  { src: venture, alt: 'Venture <W>, the best rewards' },
+  { src: shark, alt: 'The Shark Father. Mind the interest' },
 ]
 
 const TUNING = {
@@ -44,7 +45,7 @@ const TUNING = {
   /** Degrees of rotation per pixel dragged. */
   dragFactor: 0.06,
   /** Card width / height. Landscape, to fit the credit cards. Cards keep this shape at every size. */
-  aspect: 1.3,
+  aspect: 1.4,
   /**
    * Camera distance as a multiple of the ring radius. Lower = stronger fish-eye
    * (small centre card, big side cards). The original mock used 0.91.
@@ -131,9 +132,8 @@ export function Carousel({ className = '' }: { className?: string }) {
     const resize = () => {
       Object.assign(geo, fit(stage.clientWidth, stage.clientHeight))
       stage.style.perspective = `${geo.P}px`
-      // frame padding and caption size follow the card, so small cards still read as polaroids
+      // frame padding follows the card size
       stage.style.setProperty('--pad', `${Math.max(4, Math.min(10, geo.cw * 0.05)).toFixed(1)}px`)
-      stage.style.setProperty('--cap', `${Math.max(10, Math.min(15, geo.cw * 0.075)).toFixed(1)}px`)
       for (let i = 0; i < TUNING.maxCards; i++) {
         const el = cardRefs.current[i]
         if (!el) continue
@@ -243,20 +243,17 @@ export function Carousel({ className = '' }: { className?: string }) {
             ref={(el) => {
               cardRefs.current[i] = el
             }}
-            /* A polaroid: white frame, the picture in a window, a deeper strip below for the caption. */
-            className="invisible absolute top-1/2 left-1/2 flex flex-col border border-ink/15 bg-white px-(--pad) pt-(--pad) [backface-visibility:hidden] will-change-transform"
+            /* A white frame with the picture in it. */
+            className="invisible absolute top-1/2 left-1/2 flex flex-col border border-ink/15 bg-white p-(--pad) [backface-visibility:hidden] will-change-transform"
           >
             <div className="relative flex-1 overflow-hidden bg-white">
               <img
                 src={slot.src}
-                alt={slot.caption}
+                alt={slot.alt}
                 draggable={false}
                 className="pointer-events-none absolute inset-0 size-full object-contain p-[4%]"
               />
             </div>
-            <p className="flex h-[17%] shrink-0 items-center truncate px-0.5 text-(length:--cap) leading-tight text-ink/75">
-              {slot.caption}
-            </p>
           </div>
         )
       })}
