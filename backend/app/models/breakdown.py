@@ -49,6 +49,17 @@ def spending_breakdown(session: Session, child_id: int) -> list[Row]:
         .group_by(PurchaseRequest.kind)
     ).all()
     out = [Row(kind, SPEND_LABELS.get(kind, kind), int(count), int(total or 0)) for kind, count, total in rows]
+    # Milestones redeemed on the Milestones page are spent straight from the balance, not through the shop.
+    count, total = session.exec(
+        select(func.count(), func.sum(LedgerEntry.amount)).where(LedgerEntry.child_id == child_id, LedgerEntry.kind == "milestone")
+    ).one()
+    if count:
+        row = next((r for r in out if r.key == "milestone"), None)
+        if row is None:
+            out.append(Row("milestone", SPEND_LABELS["milestone"], int(count), -int(total or 0)))
+        else:
+            row.count += int(count)
+            row.total += -int(total or 0)
     return sorted(out, key=lambda r: -r.total)
 
 

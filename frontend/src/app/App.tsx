@@ -10,6 +10,7 @@ import { DashboardPage } from '../dashboard/DashboardPage.tsx'
 import { LearnPage } from '../learn/LearnPage.tsx'
 import { AddChildPage } from '../dashboard/AddChildPage.tsx'
 import { DecorPage } from '../decor/DecorPage.tsx'
+import { MilestonesPage } from '../milestones/MilestonesPage.tsx'
 import { ChildBreakdownPage } from '../dashboard/ChildBreakdownPage.tsx'
 import { ShopPage } from '../shop/ShopPage.tsx'
 import { EarnPage } from '../earn/EarnPage.tsx'
@@ -70,6 +71,14 @@ export function App() {
           element={
             <RequireAuth>
               <DecorPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="milestones"
+          element={
+            <RequireAuth>
+              <MilestonesPage />
             </RequireAuth>
           }
         />

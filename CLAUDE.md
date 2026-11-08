@@ -57,6 +57,7 @@ frontend/src/
   led/               /led "LED Home": live LedGrid of the board + wardrobe of skins
   learn/             /learn info pages: expandable lessons with small demos; text lives in learn/content.ts
   help/              the Ask button (bottom right, every page except the negotiation chat) and its chat panel
+  milestones/        /milestones: the child's goals (from the child form) as boxes with progress; redeem from balance
   front-page/  ai-feature/  profile/  vault/  nfc/  legal/  not-found/
   assets/            backdrop/, carousel/, mascot/ images (numbered PNGs, see each README)
 hardware/unicorn/    whack_grid.py, MicroPython that runs on the LED board
@@ -112,6 +113,13 @@ AI. The old paths redirect.
   `child_id` set, made by `weekly_item.sync_weekly_rewards` whenever that child's shop is read (matched by name).
   Only that child sees them; the parent's catalogue lists `child_id IS NULL` rows. A weekly reward can be bought
   `weekly_limit` times in any 7 days (`shop.weekly_status`); family weekly rewards have a limit of 1.
+- **Milestones** (`models/milestone.py`, `milestones_controller`, `/milestones`, "Milestones" button on the child
+  dashboard): the goals on the child form. Progress is the child's own balance against the cost. Redeeming
+  (`POST /api/milestones/{id}/redeem`) needs no parent approval or tap: it takes the cost from the balance (never the
+  credit card, whatever the limit) as a `milestone` ledger entry and sets `redeemed_at` (claimed with one UPDATE, so
+  only once). `replace_milestones` matches by name so editing the form keeps redeemed ones. The parent gets a push.
+  A successful redeem plays `milestones/celebrate.ts` (`canvas-confetti`, site colours, off for reduced motion).
+  These are separate from the shop's `milestone`-kind rewards (PS5 and so on).
 - **Preset prices scale with the allowance:** example rewards and LED skins have `Reward.preset` set, and their
   `price` is the price at 10.00 WC a week. A child pays `shop.price_for(reward, child.weekly_allowance)`:
   (price / 10) x their weekly allowance (no allowance: the base price; free stays free). Use it wherever a child's
