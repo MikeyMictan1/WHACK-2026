@@ -1,93 +1,67 @@
-import { Link } from 'react-router'
+import { Link, Navigate } from 'react-router'
 import { useAuth } from '../auth/useAuth.ts'
-import { NAV_LINKS } from '../components/layout/navigation.ts'
-import { CELL_BORDER, CELL_PAD, Cell, Sheet, SheetHeader } from '../components/layout/Sheet.tsx'
-import { ButtonLink } from '../components/ui/Button.tsx'
-import { BlurBackdrop } from '../components/visual/BlurBackdrop.tsx'
-import { Hero } from './Hero.tsx'
-import { ProductMock } from './ProductMock.tsx'
+import logoBlue from '../assets/brand/logo-blue.png'
+import { ButtonLink, TextLink } from '../components/ui/Button.tsx'
+import { Carousel } from './Carousel.tsx'
 
-const FEATURE_COPY: Record<string, string> = {
-  '/shop': 'Spend play money on rewards your parent sets, from a cinema trip to saving for a PS5.',
-  '/led': 'Your LED screen at home: the time, the weather, your savings jar, or skins you bought.',
-  '/ai': 'Ask anything and get an answer from Claude.',
-}
+const LINKS = [
+  { to: '/register', label: 'Create a family account' },
+  { to: '/login', label: 'Log in' },
+  { to: '/learn', label: 'How credit works' },
+]
 
-
+/**
+ * Logged-out home. Top half white: the big wordmark on the left, the pitch and actions on the right.
+ * Bottom half card blue: the carousel and quick links, then straight into the footer.
+ * Logged in, the dashboard is home, so this sends you there.
+ */
 export function FrontPage() {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
+  if (!loading && user) return <Navigate to="/dashboard" replace />
 
   return (
     <>
-      <Hero />
+      <section className="bg-white">
+        <div className="container-x grid items-center gap-10 py-14 md:py-20 lg:grid-cols-2 lg:gap-16">
+          <img src={logoBlue} alt="Teenacredit" className="w-full max-w-[640px]" />
+          <div className="max-w-[520px]">
+            <h1 className="text-[clamp(2.25rem,4vw,3.5rem)] leading-[1.02] font-light tracking-[-0.035em] text-brand">
+              A first credit card,
+              <br />
+              <span className="font-medium">with play money.</span>
+            </h1>
+            <p className="mt-6 text-lead text-muted">
+              Kids and teens spend, borrow and pay back with Whack Coins, tapping a real NFC card. Parents set the
+              limits, approve the big stuff and see how the habits are going. Nobody loses a real penny learning.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-6">
+              <ButtonLink to="/register" className="h-14 px-8 text-base">
+                Create account
+              </ButtonLink>
+              <TextLink to="/login" className="text-base text-brand">
+                I already have one
+              </TextLink>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <div className="container-x flex flex-col gap-16 py-16 md:gap-24 md:py-24">
-        {/* Showcase */}
-        <section aria-label="Showcase">
-          <Sheet>
-            <SheetHeader
-              title="One app, front to back"
-              note="The frontend talks to the backend from the first page load. Build on top of what is already running."
-            />
-            <Cell span={12} pad={false} className="relative isolate overflow-hidden">
-              <BlurBackdrop />
-              <div className="relative mx-auto max-w-[1040px] px-4 pt-10 sm:px-10 md:pt-16">
-                <ProductMock />
-              </div>
-            </Cell>
-            <Cell span={12} className="!py-4">
-              <p className="meta">
-                Sample dashboard with illustrative numbers. The status line in its title bar is live.
-              </p>
-            </Cell>
-          </Sheet>
-        </section>
-
-        {/* Features */}
-        <section aria-label="Features">
-          <Sheet>
-            <SheetHeader
-              title="Three slots to fill"
-              note="Each one has a folder in the frontend and a controller in the backend."
-            />
-            {NAV_LINKS.map((f) => (
+      <section className="flex flex-col bg-brand">
+        <span aria-hidden className="block h-1.5 bg-signal" />
+        <Carousel className="relative min-h-[380px] md:min-h-[460px]" />
+        <div className="container-x pt-4 pb-12">
+          <nav aria-label="Get started" className="grid gap-2 sm:grid-cols-3 md:gap-3">
+            {LINKS.map((f) => (
               <Link
                 key={f.to}
                 to={f.to}
-                className="group col-span-4 grid grid-cols-4 md:col-span-12 md:grid-cols-12"
+                className="flex h-14 items-center justify-between bg-white px-5 text-base font-medium text-brand hover:bg-signal hover:text-white md:h-16 md:text-lg"
               >
-                <span className={`col-span-1 md:col-span-2 ${CELL_BORDER} ${CELL_PAD} text-sm font-medium text-muted group-hover:bg-sky`}>
-                  {f.index}
-                </span>
-                <span className={`col-span-3 md:col-span-4 ${CELL_BORDER} ${CELL_PAD} text-d3 font-light group-hover:bg-sky`}>
-                  {f.label}
-                </span>
-                <span className={`col-span-4 md:col-span-4 ${CELL_BORDER} ${CELL_PAD} text-muted group-hover:bg-sky`}>
-                  {FEATURE_COPY[f.to]}
-                </span>
-                <span
-                  className={`hidden items-center justify-between md:col-span-2 md:flex ${CELL_BORDER} ${CELL_PAD} text-[15px] font-medium group-hover:bg-signal`}
-                >
-                  Open
-                  <span aria-hidden>↗</span>
-                </span>
+                {f.label}
+                <span aria-hidden>↗</span>
               </Link>
             ))}
-          </Sheet>
-        </section>
-      </div>
-
-      {/* Closing band */}
-      <section className="bg-signal">
-        <div className="container-x grid gap-10 py-20 md:grid-cols-[1fr_auto] md:items-end md:py-28">
-          <h2 className="text-[clamp(3rem,9vw,8.5rem)] leading-[0.92] font-bold tracking-[-0.045em] uppercase">
-            Your
-            <br />
-            turn.
-          </h2>
-          <ButtonLink to={user ? '/dashboard' : '/register'} variant="onAccent" className="md:mb-4">
-            {user ? 'Explore features' : 'Create account'}
-          </ButtonLink>
+          </nav>
         </div>
       </section>
     </>

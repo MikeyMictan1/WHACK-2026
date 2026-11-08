@@ -24,7 +24,7 @@ from app.models.user import User
 
 MAX_TOKENS = 600
 
-SYSTEM = """You write "your month" for a child or teen using Whack, a play-money credit card app that teaches how credit \
+SYSTEM = """You write "your month" for a child or teen using Teenacredit, a play-money credit card app that teaches how credit \
 works. All money is Whack Coins (WC): play money, not real. You are talking TO the child, so say "you".
 
 Use ONLY the facts you are given. Never invent, round or change a number. Never guess a name. Be warm, specific and brief, \

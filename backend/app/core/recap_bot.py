@@ -33,7 +33,7 @@ STATUS_WORDS = {
     "late": "paid late",
 }
 
-SYSTEM = """You write a short recap for a PARENT about how their child is using Whack, a play-money credit card app that \
+SYSTEM = """You write a short recap for a PARENT about how their child is using Teenacredit, a play-money credit card app that \
 teaches kids and teens to manage credit. All money is Whack Coins (WC): play money, not real.
 
 Use ONLY the facts you are given. Never invent, round or change a number. Never use the child's name: say "your child". \

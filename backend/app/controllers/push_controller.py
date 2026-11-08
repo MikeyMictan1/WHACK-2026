@@ -34,4 +34,4 @@ def unsubscribe(data: UnsubscribeIn, _: CurrentUser, session: SessionDep) -> Non
 
 @router.post("/test", status_code=status.HTTP_204_NO_CONTENT)
 def test(user: CurrentUser) -> None:
-    notify(user.id, "Notifications are on", "This is what Whack alerts look like.", "/dashboard")
+    notify(user.id, "Notifications are on", "This is what Teenacredit alerts look like.", "/dashboard")

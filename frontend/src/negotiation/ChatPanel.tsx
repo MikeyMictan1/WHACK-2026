@@ -29,14 +29,14 @@ export function ChatPanel({ session, sending, onSend }: Props) {
   }
 
   return (
-    <div className="flex flex-col border border-ink/20 bg-white">
+    <div className="flex flex-col border border-line bg-white">
       <ol aria-live="polite" aria-label="Conversation" className="flex max-h-[28rem] min-h-[18rem] flex-col gap-5 overflow-y-auto p-5">
         {session.messages.map((m) => (
           <li key={m.id} className={m.role === 'child' ? 'self-end' : 'self-start'}>
             <p className="meta mb-1">{m.role === 'child' ? 'You' : session.seller}</p>
             <p
               className={`max-w-prose px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap ${
-                m.role === 'child' ? 'bg-sky' : 'border border-line'
+                m.role === 'child' ? 'bg-brand text-white' : 'border border-line bg-sky'
               }`}
             >
               {m.text}

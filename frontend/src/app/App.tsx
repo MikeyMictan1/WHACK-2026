@@ -4,7 +4,7 @@ import { RequireAuth } from '../auth/RequireAuth.tsx'
 import { LoginPage } from '../auth/LoginPage.tsx'
 import { RegisterPage } from '../auth/RegisterPage.tsx'
 import { FrontPage } from '../front-page/FrontPage.tsx'
-import { AiFeaturePage } from '../ai-feature/AiFeaturePage.tsx'
+import { CardPage } from '../card/CardPage.tsx'
 import { ProfilePage } from '../profile/ProfilePage.tsx'
 import { DashboardPage } from '../dashboard/DashboardPage.tsx'
 import { LearnPage } from '../learn/LearnPage.tsx'
@@ -39,7 +39,7 @@ export function App() {
             </RequireAuth>
           }
         />
-        <Route path="ai" element={<AiFeaturePage />} />
+        <Route path="ai" element={<Navigate to="/dashboard" replace />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route
@@ -127,6 +127,14 @@ export function App() {
           element={
             <RequireAuth>
               <NegotiationPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="card"
+          element={
+            <RequireAuth>
+              <CardPage />
             </RequireAuth>
           }
         />

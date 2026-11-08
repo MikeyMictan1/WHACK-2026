@@ -15,7 +15,7 @@ export function LegalPage({ title, updated, sections }: Props) {
     <>
       <PageHeader marker="Legal" title={title} description={`Last updated ${updated}.`} />
       <section className="container-x py-12 md:py-16">
-        <p className="max-w-[68ch] bg-signal/40 px-5 py-4 text-[15px]">
+        <p className="max-w-[68ch] bg-sky px-5 py-4 text-[15px]">
           Template placeholder. Replace this page with terms written for your product and
           reviewed by someone qualified before you launch.
         </p>

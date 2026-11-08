@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { PageHeader } from '../components/layout/PageHeader.tsx'
 import { ButtonLink, TextLink } from '../components/ui/Button.tsx'
 import { FormError } from '../components/ui/FormError.tsx'
 import { Skeleton } from '../components/ui/Skeleton.tsx'
@@ -11,6 +10,8 @@ import { ChatPanel } from './ChatPanel.tsx'
 import { ConfirmSwitch } from './ConfirmSwitch.tsx'
 import { negotiationApi, type ConfirmResult, type NegotiationSession } from './negotiationApi.ts'
 import { OfferPanel } from './OfferPanel.tsx'
+import { moodOf } from './mood.ts'
+import { SellerPortrait } from './SellerPortrait.tsx'
 
 const messageOf = (err: unknown) => (err instanceof ApiError ? err.message : 'Something went wrong.')
 
@@ -92,9 +93,23 @@ export function NegotiationPage() {
 
   return (
     <>
-      <PageHeader marker="Negotiate" title={title} description={description} />
+      {/* All white here: the seller art brings the blue. */}
+      <header className="container-x pt-10 md:pt-14">
+        <p className="flex items-center gap-3 text-sm font-medium text-muted">
+          <span aria-hidden className="block h-0.5 w-6 bg-signal" />
+          Negotiate
+        </p>
+        <h1 className="mt-2 text-[clamp(2.25rem,5vw,4rem)] leading-[0.95] font-light tracking-[-0.04em] text-brand">{title}</h1>
+        <p className="mt-3 max-w-xl text-lead text-muted">{description}</p>
+      </header>
 
-      <section className="container-x py-10 md:py-14">
+      <section className="container-x py-8 md:py-10">
+        {session && status !== 'confirmed' && (
+          <div className="mb-8">
+            <SellerPortrait session={session} mood={moodOf(session)} />
+          </div>
+        )}
+
         <div aria-live="polite" className="mb-6">
           <FormError message={error} />
         </div>

@@ -79,7 +79,7 @@ CARD_SEED: list[Card] = [
     Card(
         id="debit", name="DeerDebit", tier=0, pitch="Spend only what you have. No borrowing, no interest.",
         listed_apr_bp=0, max_discount_bp=0, limit_multiplier_pct=0, min_score=0, rewards_bp=0, late_fee=0,
-        negotiable=False, seller="Whack Bank",
+        negotiable=False, seller="Teenacredit Bank",
     ),
     Card(
         id=STARTER_CARD_ID, name="CaliccoCredit", tier=1, pitch="The starter card. Small limit, friendly terms.",
@@ -87,9 +87,9 @@ CARD_SEED: list[Card] = [
         late_fee=0, seller="Mia from CaliccoCredit",
     ),
     Card(
-        id="chip", name="Cap One", tier=2, pitch="A step up. A higher limit and a little cash back.",
+        id="chip", name="ChipOne", tier=2, pitch="A step up. A higher limit and a little cash back.",
         listed_apr_bp=1500, max_discount_bp=300, limit_multiplier_pct=150, min_score=600, rewards_bp=100,
-        late_fee=0, seller="Simon Smith from Cap One",
+        late_fee=0, seller="Simon Smith from ChipOne",
     ),
     Card(
         id="venture_w", name="Venture <W>", tier=3, pitch="Best rewards and the lowest rates, for strong scores.",
@@ -180,7 +180,7 @@ MIN_CREDIT_LIMIT = 100  # 1.00 WC: a credit card always has some limit, even on 
 
 
 def limit_for(card: Card, weekly_allowance: int) -> int:
-    """This card's credit limit for a child with this weekly allowance: CaliccoCredit 1x, Cap One 1.5x,
+    """This card's credit limit for a child with this weekly allowance: CaliccoCredit 1x, ChipOne 1.5x,
     Venture <W> 3x, The Shark Father 10x. 0 for DeerDebit. No allowance set counts as 10.00 WC a week, like the shop's
     preset prices (shop.scaled_price)."""
     if card.limit_multiplier_pct <= 0:

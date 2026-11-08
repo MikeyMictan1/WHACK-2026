@@ -1,13 +1,14 @@
 import { Link } from 'react-router'
+import { useAuth } from '../../auth/useAuth.ts'
+import logoBlue from '../../assets/brand/logo-blue.png'
+import logoWhite from '../../assets/brand/logo-white.png'
 
-export function Logo() {
+/** The Teenacredit wordmark. `tone="white"` for blue bands. Goes to the dashboard once logged in. */
+export function Logo({ tone = 'blue', className = 'h-9' }: { tone?: 'blue' | 'white'; className?: string }) {
+  const { user } = useAuth()
   return (
-    <Link to="/" className="flex items-center gap-2" aria-label="Whack, home">
-      <svg aria-hidden viewBox="0 0 20 20" className="size-5">
-        <rect x="0" y="0" width="11" height="11" fill="currentColor" />
-        <rect x="9" y="9" width="11" height="11" fill="currentColor" opacity="0.4" />
-      </svg>
-      <span className="text-lg font-semibold tracking-[-0.02em]">Whack</span>
+    <Link to={user ? '/dashboard' : '/'} className="flex shrink-0 items-center" aria-label="Teenacredit, home">
+      <img src={tone === 'white' ? logoWhite : logoBlue} alt="" className={`w-auto ${className}`} />
     </Link>
   )
 }

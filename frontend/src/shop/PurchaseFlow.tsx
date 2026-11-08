@@ -110,6 +110,8 @@ export function PurchaseFlow({ request, onClose, onChange }: Props) {
     onClose()
   }
 
+  // In-game items (decor, LED skins) skip the parent and start at the tap.
+  const selfServe = req.kind === 'in_game' || req.kind === 'led_skin'
   const content = {
     pending: {
       step: 'Step 1 of 2',
@@ -117,9 +119,9 @@ export function PurchaseFlow({ request, onClose, onChange }: Props) {
       body: `We asked them to approve ${req.title} for ${formatMoney(req.price)}. Keep this screen open.`,
     },
     approved: {
-      step: 'Step 2 of 2',
+      step: selfServe ? 'Pay' : 'Step 2 of 2',
       title: tapError ? 'That didn’t work' : 'Tap your card',
-      body: 'Approved. Hold your card on the reader to pay (lift it and tap again if it is already there), or tap it on the back of this phone.',
+      body: `${selfServe ? `${req.title} for ${formatMoney(req.price)}. In-game items need no approval.` : 'Approved.'} Hold your card on the reader to pay (lift it and tap again if it is already there), or tap it on the back of this phone.`,
     },
     paid: {
       step: 'Done',

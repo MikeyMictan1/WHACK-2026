@@ -16,11 +16,11 @@ export function OfferPanel({ session, busy, onAccept, onWalkAway }: Props) {
   const percentWon = Math.round(session.progress * 100)
 
   return (
-    <aside aria-label="Current offer" className="border border-ink bg-white p-6 md:p-8">
+    <aside aria-label="Current offer" className="border border-line border-t-4 border-t-brand bg-white p-6 md:p-8">
       <p className="meta">Current offer</p>
       <p
         className={`mt-3 inline-block px-3 py-1 text-[clamp(3rem,7vw,4.75rem)] leading-none font-light tracking-[-0.04em] ${
-          improved ? 'bg-signal' : worse ? 'bg-ink text-white' : ''
+          improved ? 'bg-brand text-white' : worse ? 'bg-signal' : ''
         }`}
         aria-live="polite"
       >
@@ -57,9 +57,9 @@ export function OfferPanel({ session, busy, onAccept, onWalkAway }: Props) {
           aria-valuemax={100}
           aria-valuenow={percentWon}
           aria-label="How much of the best available discount you have won"
-          className="mt-2 h-3 border border-ink"
+          className="mt-2 h-3 border border-brand"
         >
-          <div className="h-full bg-ink" style={{ width: `${percentWon}%` }} />
+          <div className="h-full bg-brand" style={{ width: `${percentWon}%` }} />
         </div>
       </div>
 
