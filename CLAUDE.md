@@ -152,6 +152,31 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
   messages use neutral wording. Change the maths and `score_rules_test`-style checks need new numbers.
 - A child can change plan once a month (`switch_locked_reason`); Plans and the negotiation both check it.
 
+## Parent dashboard: kids list, breakdown, starting limit
+
+- `User.starting_credit_limit` (minor units, 100 to 10000, null = card's own) applies to the starter card
+  `STARTER_CARD_ID` (Whack Basic) only. Always get a child's limit through `models/card.card_limit_for`, never
+  `card.credit_limit` directly (plans, opener, bot prompt, `confirm_switch` all pass it). Editing it updates the
+  profile at once if the child is still on the starter card.
+- `GET /api/breakdown/{child_id}` (parent, own children only) and `POST .../recap` (20 s cooldown) in
+  `breakdown_controller`; numbers from `models/breakdown.py`. The parent sees the score even if the child's tracking is off.
+- `core/recap_bot.py`: the facts sheet is built in code, Claude only writes JSON sentences from it, any number not in the
+  facts is rejected (one retry), then `template_recap`. Never send the child's name. Saved in `Recap` (deleted with the child).
+
+## Child home: decor and spending chart
+
+- Decor = any in-game reward the child has paid for (`models/decor.owned_decor`). `DecorPlacement` stores side and slot;
+  `PUT /api/decor` saves the whole layout (owned only, once each, 4 per side). `GET /api/decor/spending` feeds the Home chart
+  (reuses `models/breakdown.spending_breakdown`). Frontend: `decor/` (page, panel, tile); no art exists, tiles show the item's initial.
+
+## Monthly wrap (child's AI summary)
+
+- `GET /api/story` (`story_controller`, `core/story_bot.py`) writes the story for the child's latest statement on first ask and
+  saves it as `MonthlyStory` (one per statement number and status, so paying earns a fresh one). `POST /api/story/retry` swaps a
+  built-in story for an AI one. Same rules as the parent recap: facts built in code, unknown numbers rejected, scripted fallback,
+  no names. If the child's score tracking is off the facts omit the score and any draft mentioning "score" is rejected.
+  Shown by `monthly/StorySection.tsx` at the top of `/review`.
+
 ## Change plan and negotiation
 
 Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plans_controller`) ->

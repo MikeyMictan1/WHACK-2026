@@ -9,6 +9,9 @@ from datetime import UTC, datetime
 from sqlmodel import Field, Session, SQLModel, select
 
 from app.models.score import init_score, utilisation_bp_of
+from app.models.user import User
+
+STARTER_CARD_ID = "whack_basic"
 
 # ---- Tables ----------------------------------------------------------------
 
@@ -123,18 +126,31 @@ def get_card(session: Session, card_id: str) -> Card | None:
     return session.get(Card, card_id)
 
 
+def card_limit_for(session: Session, card: Card, user_id: int) -> int:
+    """The credit limit this child gets on this card.
+
+    A parent can set a starting limit for their child, and it applies to the starter card (Whack Basic) only. Every
+    other card keeps its own limit: a bigger limit is part of what unlocking a better card earns.
+    """
+    if card.id == STARTER_CARD_ID:
+        user = session.get(User, user_id)
+        if user is not None and user.starting_credit_limit:
+            return user.starting_credit_limit
+    return card.credit_limit
+
+
 def get_profile(session: Session, user_id: int) -> CreditProfile:
     """The child's credit account, created on first use as a fresh account on the starter card."""
     profile = session.get(CreditProfile, user_id)
     now = datetime.now(UTC)
     if profile is None:
-        starter = get_card(session, "whack_basic")
+        starter = get_card(session, STARTER_CARD_ID)
         assert starter is not None
         profile = CreditProfile(
             user_id=user_id,
             current_card_id=starter.id,
             current_apr_bp=starter.listed_apr_bp,
-            credit_limit=starter.credit_limit,
+            credit_limit=card_limit_for(session, starter, user_id),
             sim_now=now,
             opened_at=now,
         )
@@ -145,11 +161,11 @@ def get_profile(session: Session, user_id: int) -> CreditProfile:
     elif profile.sim_now is None:
         # Made before the credit core existed, when balance, limit and APR were demo numbers.
         # Start a real account on the same card.
-        card = get_card(session, profile.current_card_id) or get_card(session, "whack_basic")
+        card = get_card(session, profile.current_card_id) or get_card(session, STARTER_CARD_ID)
         assert card is not None
         profile.current_card_id = card.id
         profile.current_apr_bp = card.listed_apr_bp
-        profile.credit_limit = card.credit_limit
+        profile.credit_limit = card_limit_for(session, card, user_id)
         profile.balance = 0
         profile.on_time_streak = 0
         profile.months_open = 0

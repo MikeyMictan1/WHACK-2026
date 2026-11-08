@@ -50,6 +50,7 @@ CHILDREN = [
         "items": [("Cinema ticket", 800, 1), ("Snacks", 250, 3)],
         "milestones": [("Concert ticket", 12000), ("Headphones", 8000)],
         "start_money": 5000,
+        "starting_credit_limit": 4000,  # the parent gave Alex a 40.00 WC limit on the starter card
         # A record from before the app: six good months of payments on a nine-month-old account (score 715).
         # One more good month takes it past the 720 that Venture W needs. Score tracking is on at 15+.
         "profile": {"on_time_streak": 6, "months_open": 9, "score_payment": 190},
@@ -89,6 +90,7 @@ def _get_or_create_child(session: Session, parent: User, spec: dict) -> None:
         weekly_allowance=spec["weekly_allowance"],
         app_experience=spec["app_experience"],
         card_type=spec["card_type"],
+        starting_credit_limit=spec.get("starting_credit_limit"),
     )
     assert child.id is not None
     replace_weekly_items(session, child.id, [WeeklyItemInput(name=n, cost=c, weekly_limit=w) for n, c, w in spec["items"]])

@@ -9,11 +9,13 @@ from fastapi.responses import FileResponse
 from app.controllers import (
     admin_controller,
     auth_controller,
+    breakdown_controller,
     children_controller,
     chores_controller,
     credit_controller,
     ai_controller,
     clock_controller,
+    decor_controller,
     health_controller,
     help_controller,
     led_controller,
@@ -22,6 +24,7 @@ from app.controllers import (
     plans_controller,
     push_controller,
     shop_controller,
+    story_controller,
     vault_controller,
 )
 from app.core.config import settings
@@ -54,10 +57,12 @@ for controller in (
     auth_controller,
     admin_controller,
     children_controller,
+    breakdown_controller,
     chores_controller,
     credit_controller,
     ai_controller,
     clock_controller,
+    decor_controller,
     help_controller,
     led_controller,
     plans_controller,
@@ -65,6 +70,7 @@ for controller in (
     nfc_controller,
     push_controller,
     shop_controller,
+    story_controller,
     vault_controller,
 ):
     api.include_router(controller.router)

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from app.controllers.deps import CurrentChild
 from app.core.database import SessionDep
-from app.models.card import Card, CreditProfile, allowed_ids, get_profile, list_cards
+from app.models.card import Card, CreditProfile, allowed_ids, card_limit_for, get_profile, list_cards
 from app.models.score import score_enabled
 from app.models.pricing import (
     blocked_reason,
@@ -74,7 +74,9 @@ def current_plan(profile: CreditProfile, session: SessionDep, *, show_score: boo
     )
 
 
-def _option(profile: CreditProfile, card: Card, allowed: set[str] | None, show_score: bool = True) -> PlanOption:
+def _option(
+    profile: CreditProfile, card: Card, allowed: set[str] | None, show_score: bool = True, limit: int | None = None
+) -> PlanOption:
     low, high = typical_range_bp(profile, card) if card.negotiable else (card.listed_apr_bp, card.listed_apr_bp)
     return PlanOption(
         id=card.id,
@@ -84,14 +86,14 @@ def _option(profile: CreditProfile, card: Card, allowed: set[str] | None, show_s
         listed_apr_bp=card.listed_apr_bp,
         typical_low_bp=low,
         typical_high_bp=high,
-        credit_limit=card.credit_limit,
+        credit_limit=card.credit_limit if limit is None else limit,
         rewards_bp=card.rewards_bp,
         late_fee=card.late_fee,
         min_score=card.min_score,
         monthly_interest=monthly_interest(estimate_balance(profile), card.listed_apr_bp),
         year_net_cost=twelve_month_cost(profile, card, card.listed_apr_bp).net,
         is_current=card.id == profile.current_card_id,
-        blocked_reason=blocked_reason(profile, card, allowed, show_score=show_score),
+        blocked_reason=blocked_reason(profile, card, allowed, show_score=show_score, limit=limit),
     )
 
 
@@ -103,7 +105,7 @@ def get_plans(child: CurrentChild, session: SessionDep) -> PlansResponse:
     show_score = score_enabled(child.app_experience)
     return PlansResponse(
         current=current_plan(profile, session, show_score=show_score),
-        options=[_option(profile, c, allowed, show_score) for c in list_cards(session)],
+        options=[_option(profile, c, allowed, show_score, card_limit_for(session, c, child.id)) for c in list_cards(session)],
         estimate_balance=estimate_balance(profile),
         estimate_is_example=estimate_is_example(profile),
         switch_locked_reason=switch_locked_reason(profile),

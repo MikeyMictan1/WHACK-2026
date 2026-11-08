@@ -23,7 +23,7 @@ from app.core import led_feedback, seller_bot
 from app.core.config import settings
 from app.core.database import SessionDep
 from app.models import negotiation as neg_model
-from app.models.card import Card, CreditProfile, allowed_ids, get_card, get_profile
+from app.models.card import Card, CreditProfile, allowed_ids, card_limit_for, get_card, get_profile
 from app.models.negotiation import NegotiationSession
 from app.models.score import score_enabled
 from app.models.pricing import (
@@ -163,13 +163,14 @@ def start_negotiation(card_id: str, child: CurrentChild, db: SessionDep, bg: Bac
     card = get_card(db, card_id)
     if card is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Card not found")
-    reason = blocked_reason(profile, card, allowed_ids(profile), show_score=score_enabled(child.app_experience))
+    limit = card_limit_for(db, card, child.id)
+    reason = blocked_reason(profile, card, allowed_ids(profile), show_score=score_enabled(child.app_experience), limit=limit)
     if reason:
         raise HTTPException(status.HTTP_409_CONFLICT, reason)
 
     neg = neg_model.start_session(db, profile, card, floor_apr_bp(profile, card))
     if card.negotiable and not neg_model.messages_of(db, neg.id or 0):
-        neg_model.add_message(db, neg, "seller", seller_bot.opening_message(card), neg.best_offer_bp)
+        neg_model.add_message(db, neg, "seller", seller_bot.opening_message(card, limit), neg.best_offer_bp)
         bg.add_task(led_feedback.show_progress, _progress(neg))
     return _out(db, neg, profile)
 
@@ -212,6 +213,7 @@ def say(session_id: int, body: SayIn, child: CurrentChild, db: SessionDep, bg: B
             profile, card, age=seller_bot.age_from_experience(child.app_experience), best_bp=neg.best_offer_bp, turns_left=turns_left,
             history=history, child_text=text, seen_offers_bp=seen, record=record,
             show_score=score_enabled(child.app_experience),
+            limit=card_limit_for(db, card, child.id),
         )
     except HTTPException:
         # No key, rate limit or API down: a scripted bot keeps the demo alive.

@@ -14,6 +14,8 @@ export type User = {
   app_experience: string | null
   /** Children only: comma-separated enabled card types. */
   card_type: string | null
+  /** Children only, minor units: the limit on their starter card. null = the card's own limit. */
+  starting_credit_limit?: number | null
   created_at: string
 }
 

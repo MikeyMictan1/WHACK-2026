@@ -29,12 +29,15 @@ spend it on rewards, and watch their credit score react. Claude explains what th
 
 ## 3. Parent dashboard
 
-1. **Kids list:** one card per child (balance, score, next payment). "Add child account" button.
-2. **Child breakdown:** spending, score history, recent transactions, AI weekly recap.
+1. **Kids list** *(built)*: one row per child with balance, card, score (when tracking is on) and next payment, plus
+   "Add child" and a Breakdown link.
+2. **Child breakdown** *(built, `/dashboard/children/:id`)*: spending and earning by kind, what credit has cost,
+   score history with reasons, recent activity, statements, and an AI recap (name-free, numbers checked against the
+   backend's facts, built-in summary if Claude is down). Recap is written on request, not weekly.
 3. **Approvals:** incoming purchase requests (notification, then approve or deny).
 4. **Controls per child:**
    - Weekly allowance amount and payday
-   - Starting credit limit
+   - Starting credit limit *(built: 1 to 100 WC, applies to the starter card Whack Basic only)*
    - Which credit cards the child can access: parent picks the allowed set (for example 2 to
      start with, pre-selected by age so it's one tap to accept), and the child chooses between
      them at first login
@@ -47,16 +50,17 @@ spend it on rewards, and watch their credit score react. Claude explains what th
 
 Matches the designer's mocks.
 
-1. **Home:** current balance, available credit, breakdown chart, payment due date, recent transactions.
-   Side panel is decor space for owned cosmetics.
+1. **Home** *(built)*: current balance, credit left, payment due date, spending chart (by kind), recent
+   transactions. Left and right side panels show placed decor.
 2. **Rewards:** three rows of item cards.
    - In-game (cosmetics, decor)
    - Weekly (small items)
    - Milestones (parent-set goals)
 3. **Earn money:** chores and extracurriculars the parent has added. Kid marks done, parent approves.
-4. **Monthly review:** AI summary, new credit score, updated plan (interest, limit), "Change plan?".
+4. **Monthly review** *(AI summary built)*: AI summary, new credit score, updated plan (interest, limit), "Change plan?".
 5. **Change plan:** lists cards the parent allows, with a "Negotiate?" button leading to the AI chat.
-6. **Decor:** owned items can be placed in left and right screen sections.
+6. **Decor** *(built, `/decor`)*: owned in-game items placed in the left and right panels (4 per side; pick an item,
+   then a side).
 7. **Learn:** info pages about credit (see 4.1). Linked from the nav, from the score on Home,
    and from the monthly review.
 

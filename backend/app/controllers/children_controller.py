@@ -17,11 +17,14 @@ from app.models.user import (
 )
 from sqlmodel import col, delete, select
 
-from app.models.card import CreditProfile
+from app.models.card import STARTER_CARD_ID, CreditProfile, get_card
 from app.models.credit import CreditEntry, Statement
+from app.models.decor import DecorPlacement
 from app.models.help import HelpMessage
 from app.models.milestone import delete_milestones, list_milestones, replace_milestones
+from app.models.recap import Recap
 from app.models.score import ScoreEvent
+from app.models.story import MonthlyStory
 from app.models.negotiation import NegotiationMessage, NegotiationSession
 from app.models.shop import CardLink, ChoreClaim, LedgerEntry, PurchaseRequest
 from app.models.vault import Vault
@@ -69,6 +72,7 @@ def add_child(data: ChildCreate, parent: CurrentParent, session: SessionDep) -> 
         weekly_allowance=data.weekly_allowance,
         app_experience=data.app_experience,
         card_type=data.card_type,
+        starting_credit_limit=data.starting_credit_limit,
     )
     assert child.id is not None
     replace_weekly_items(session, child.id, data.weekly_items)
@@ -90,6 +94,13 @@ def update_child(child_id: int, data: ChildUpdate, parent: CurrentParent, sessio
         child.card_type = data.card_type
     if data.password is not None:
         child.hashed_password = hash_password(data.password)
+    if "starting_credit_limit" in data.model_fields_set:  # null is a real value here: back to the card's own limit
+        child.starting_credit_limit = data.starting_credit_limit
+        profile = session.get(CreditProfile, child_id)
+        starter = get_card(session, STARTER_CARD_ID)
+        if profile is not None and starter is not None and profile.current_card_id == STARTER_CARD_ID:
+            profile.credit_limit = data.starting_credit_limit or starter.credit_limit  # still on that card: change it now
+            session.add(profile)
     if data.weekly_items is not None:
         replace_weekly_items(session, child_id, data.weekly_items)
     if data.milestones is not None:
@@ -107,7 +118,7 @@ def delete_child(child_id: int, parent: CurrentParent, session: SessionDep) -> N
         session.delete(vault)
     delete_weekly_items(session, child_id)
     delete_milestones(session, child_id)
-    for table in (LedgerEntry, PurchaseRequest, ChoreClaim, CardLink, CreditEntry, Statement, ScoreEvent):
+    for table in (LedgerEntry, PurchaseRequest, ChoreClaim, CardLink, CreditEntry, Statement, ScoreEvent, Recap, DecorPlacement, MonthlyStory):
         session.exec(delete(table).where(table.child_id == child.id))  # type: ignore[call-overload]
     negotiation_ids = session.exec(select(NegotiationSession.id).where(NegotiationSession.user_id == child.id)).all()
     if negotiation_ids:
