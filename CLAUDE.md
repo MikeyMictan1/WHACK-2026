@@ -108,6 +108,15 @@ AI. The old paths redirect.
   `pending -> approved -> paid`; `/shop/requests/{id}/pay` blocks up to 30 s waiting for a tap on
   the reader (`?simulate=true` skips it). A child's first card used to pay gets linked (`CardLink`).
   New parents get example rewards/chores (`STARTER_REWARDS`). Parent screens poll every 2-3 s.
+- **Weekly items:** the per-child list on the child form (`WeeklyItem`) reaches the shop as `Reward` rows with
+  `child_id` set, made by `weekly_item.sync_weekly_rewards` whenever that child's shop is read (matched by name).
+  Only that child sees them; the parent's catalogue lists `child_id IS NULL` rows. A weekly reward can be bought
+  `weekly_limit` times in any 7 days (`shop.weekly_status`); family weekly rewards have a limit of 1.
+- **Preset prices scale with the allowance:** example rewards and LED skins have `Reward.preset` set, and their
+  `price` is the price at 10.00 WC a week. A child pays `shop.price_for(reward, child.weekly_allowance)`:
+  (price / 10) x their weekly allowance (no allowance: the base price; free stays free). Use it wherever a child's
+  price matters (shop list, request, LED wardrobe and savings goal); the request then keeps that price. A parent's
+  own items and each child's weekly list keep their prices. `mark_presets` flags rows made before the flag.
 - **Backend hot reload can hang** (open SSE streams / the NFC thread). If an endpoint change doesn't
   show up, run `scripts/backend-restart`.
 - **Auth is a cookie**, not a header. `api()` sends `credentials: 'include'`; don't add
@@ -145,20 +154,27 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
   (`advance_month`, `POST /api/credit/children/{id}/skip-month`) moves it: 4 weeks, 4 allowances, the due date
   passes, interest and any late fee, a new `Statement`. Statements are due 14 days after they are issued.
   This is separate from the admin's site clock (`models/clock.py`, `site_now()`), which the shop uses.
-- The seeded cards follow DESIGN.md 6.1 (`models/card.py`).
+- The seeded cards follow DESIGN.md 6.1 (`models/card.py`). Credit limits are not fixed amounts: each card has a
+  `limit_multiplier_pct` of the child's weekly allowance (CaliccoCredit 1x, Cap One 1.5x, Venture <W> 3x, The Shark Father 10x, at
+  least 1.00 WC; no allowance counts as 10.00 WC a week, as for shop prices). `get_profile` copies the allowance onto `CreditProfile.weekly_allowance` and keeps
+  `credit_limit` in step. For a card the child isn't on, use `card_limit_for(session, card, user_id)` or
+  `limit_for(card, profile.weekly_allowance)`, never `card.credit_limit` (an unused leftover column, like
+  `User.starting_credit_limit`). The starter card is CaliccoCredit (`STARTER_CARD_ID = "calicco_credit"`); it was
+  Whack Basic (`whack_basic`), and `list_cards` moves old data to the new id once.
 - The credit score (`models/score.py`) is 300 + payment history (250) + credit used (150) + history (100). It is
   recalculated only in `advance_month`, and every change is saved as a `ScoreEvent` with its reason. It is always
   tracked, but only shown where the parent turned it on (`score_enabled`, mirroring the form's presets); the API
   returns `score: null` otherwise, the AI helper and the sellers are told not to name a number, and locked-card
   messages use neutral wording. Change the maths and `score_rules_test`-style checks need new numbers.
 - A child can change plan once a month (`switch_locked_reason`); Plans and the negotiation both check it.
+- The card types ticked on the child form (`User.card_type`, preset or Custom) decide which cards a child can use.
+  `get_profile` turns them into `CreditProfile.allowed_card_ids` via `FORM_CARD_TYPES` in `models/card.py` (form
+  value -> card id; keep it in step with `CARD_TYPE_OPTIONS` in `childrenApi.ts`). Nothing ticked = every card. If
+  the child's card is turned off and they owe nothing, they move to the starter card (or the lowest allowed one);
+  if they owe money they keep it, but can't spend on it until they pay it off or switch.
 
-## Parent dashboard: kids list, breakdown, starting limit
+## Parent dashboard: kids list, breakdown
 
-- `User.starting_credit_limit` (minor units, 100 to 10000, null = card's own) applies to the starter card
-  `STARTER_CARD_ID` (Whack Basic) only. Always get a child's limit through `models/card.card_limit_for`, never
-  `card.credit_limit` directly (plans, opener, bot prompt, `confirm_switch` all pass it). Editing it updates the
-  profile at once if the child is still on the starter card.
 - `GET /api/breakdown/{child_id}` (parent, own children only) and `POST .../recap` (20 s cooldown) in
   `breakdown_controller`; numbers from `models/breakdown.py`. The parent sees the score even if the child's tracking is off.
 - `core/recap_bot.py`: the facts sheet is built in code, Claude only writes JSON sentences from it, any number not in the
@@ -186,7 +202,7 @@ Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plan
 
 - Numbers are the backend's: `models/pricing.py` computes the floor APR from score, payment streak and
   utilisation, and `clamp_offer` limits every bot offer (down to the floor in steps; up per rude message by the card's `penalty_step_bp`, at most `max_penalty_bp` over the listed APR: 1 and 3 points,
-  but Loan Shark punishes hard, 2.5 and 5 points; politeness takes a penalty back off 1 point a message). The bot (`core/seller_bot.py`) never sees the
+  but The Shark Father punishes hard, 2.5 and 5 points; politeness takes a penalty back off 1 point a message). The bot (`core/seller_bot.py`) never sees the
   floor; it calls a `make_offer` tool and is told what was recorded. The UI shows the recorded offer.
 - `models/card.py` seeds the five cards and holds `CreditProfile`, the child's credit account (their card,
   what they owe, their clock, their score and its three parts; created on first use through `get_profile`, which

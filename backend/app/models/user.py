@@ -10,8 +10,6 @@ from app.models.milestone import MilestoneInput, MilestonePublic
 from app.models.weekly_item import WeeklyItemInput, WeeklyItemPublic
 
 USERNAME_PATTERN = r"^[a-zA-Z0-9_.-]{3,32}$"
-MIN_STARTING_LIMIT = 100  # 1.00 WC, in minor units
-MAX_STARTING_LIMIT = 10_000  # 100.00 WC
 
 # "admin" is never created through the API: ensure_admin() seeds the single admin at startup.
 Role = Literal["parent", "child", "admin"]
@@ -31,8 +29,8 @@ class User(SQLModel, table=True):
     weekly_allowance: int | None = None  # children only, minor units (1/100 WC)
     app_experience: str | None = Field(default=None, max_length=20)  # children only
     card_type: str | None = Field(default=None, max_length=100)  # children only: comma-separated
-    # Children only: the credit limit on their starter card (Whack Basic), set by the parent. None = the card's own
-    # limit. Minor units; see models/card.card_limit_for.
+    # Unused: a parent-set starter-card limit, replaced by limits that scale with the weekly allowance
+    # (models/card.limit_for). Kept so existing databases keep working.
     starting_credit_limit: int | None = None
     created_at: datetime = Field(default_factory=lambda: site_now())
 
@@ -73,7 +71,6 @@ class UserPublic(SQLModel):
     weekly_allowance: int | None
     app_experience: str | None
     card_type: str | None
-    starting_credit_limit: int | None = None
     created_at: datetime
 
 
@@ -92,7 +89,6 @@ class ChildCreate(SQLModel):
     weekly_allowance: int = Field(ge=0)  # minor units
     app_experience: str = Field(min_length=1, max_length=20)
     card_type: str = Field(max_length=100)
-    starting_credit_limit: int | None = Field(default=None, ge=MIN_STARTING_LIMIT, le=MAX_STARTING_LIMIT)
     weekly_items: list[WeeklyItemInput] = []
     milestones: list[MilestoneInput] = []
 
@@ -110,8 +106,6 @@ class ChildUpdate(SQLModel):
     app_experience: str | None = Field(default=None, min_length=1, max_length=20)
     card_type: str | None = Field(default=None, max_length=100)
     password: str | None = Field(default=None, min_length=4, max_length=128)
-    # Send null to go back to the card's own limit; leave it out to keep what is saved.
-    starting_credit_limit: int | None = Field(default=None, ge=MIN_STARTING_LIMIT, le=MAX_STARTING_LIMIT)
     weekly_items: list[WeeklyItemInput] | None = None  # replaces the whole list when sent
     milestones: list[MilestoneInput] | None = None  # replaces the whole list when sent
 
@@ -137,7 +131,6 @@ def create_user(
     weekly_allowance: int | None = None,
     app_experience: str | None = None,
     card_type: str | None = None,
-    starting_credit_limit: int | None = None,
 ) -> User:
     user = User(
         username=username.lower(),
@@ -148,7 +141,6 @@ def create_user(
         weekly_allowance=weekly_allowance,
         app_experience=app_experience,
         card_type=card_type,
-        starting_credit_limit=starting_credit_limit,
     )
     session.add(user)
     session.commit()

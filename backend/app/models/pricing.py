@@ -6,7 +6,7 @@ clamped by `clamp_offer` before it is recorded.
 
 from dataclasses import dataclass
 
-from app.models.card import Card, CreditProfile
+from app.models.card import Card, CreditProfile, limit_for
 from app.models.credit import EXAMPLE_BALANCE, interest_for
 
 MAX_SCORE = 800
@@ -130,7 +130,7 @@ def blocked_reason(
 
     `show_score` is False when the parent has switched credit score tracking off for this child: the reason
     then says the card needs a stronger credit record without naming a number they can't see.
-    `limit` is this child's limit on the card when it differs from the card's own (a parent's starting limit).
+    `limit` is this child's limit on the card; by default it is worked out from their weekly allowance.
     """
     if card.id == profile.current_card_id:
         return "This is your current plan."
@@ -141,8 +141,8 @@ def blocked_reason(
             return "This card needs a stronger credit record first."
         return f"You need a score of {card.min_score}. Yours is {profile.score}."
     if card.id == "debit" and profile.balance > 0:
-        return "Pay off your balance first. Debit has no borrowing."
-    cap = card.credit_limit if limit is None else limit
+        return "Pay off your balance first. DeerDebit has no borrowing."
+    cap = limit_for(card, profile.weekly_allowance) if limit is None else limit
     if cap and profile.balance > cap:
         return "Your balance is higher than this card's limit."
     return switch_locked_reason(profile)

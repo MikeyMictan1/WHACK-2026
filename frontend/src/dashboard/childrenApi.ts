@@ -3,6 +3,7 @@ import type { User } from '../auth/types.ts'
 
 export const APP_EXPERIENCE_PRESETS = ['10+', '13+', '15+'] as const
 
+/** Which cards a child can use. Each value maps to a card id in FORM_CARD_TYPES (backend/app/models/card.py). */
 export const CARD_TYPE_OPTIONS = [
   { value: 'deer_debit', label: 'DeerDebit' },
   { value: 'shark_father', label: 'The Shark Father' },
@@ -58,7 +59,6 @@ export type ChildInput = {
   app_experience: string
   card_type: string
   /** Minor units, 1.00 to 100.00 WC. null = the card's own limit. */
-  starting_credit_limit: number | null
   weekly_items: WeeklyItemInput[]
   milestones: MilestoneInput[]
 }
@@ -67,7 +67,7 @@ export type ChildInput = {
 export type ChildUpdate = Partial<
   Pick<
     ChildInput,
-    'display_name' | 'weekly_allowance' | 'app_experience' | 'card_type' | 'password' | 'starting_credit_limit' | 'weekly_items' | 'milestones'
+    'display_name' | 'weekly_allowance' | 'app_experience' | 'card_type' | 'password' | 'weekly_items' | 'milestones'
   >
 >
 

@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from fastapi import HTTPException
 
 from app.controllers.ai_controller import call_claude
-from app.models.card import Card, CreditProfile
+from app.models.card import Card, CreditProfile, limit_for
 from app.models.pricing import money, pct, twelve_month_cost
 
 # record(requested_bp) -> (offer now on the table in bp, True if that is the lowest possible)
@@ -26,7 +26,7 @@ MAX_TOOL_ROUNDS = 3
 MAX_REPLY_TOKENS = 500
 
 PERSONAS = {
-    "whack_basic": (
+    "calicco_credit": (
         "MIA, the cheerleader. A warm, upbeat coach who is genuinely thrilled the child is starting out. You celebrate "
         "small wins and talk in 'we', like a friendly older sibling. Praise first, then the ask. Short, bright sentences. "
         "When the child is vague, give a friendly hint about what would help (months paid on time, how little of the limit "
@@ -41,7 +41,7 @@ PERSONAS = {
         "it flatly, the rate goes up, and there is no drama."
     ),
     "venture_w": (
-        "PRIYA, the exclusive club hostess. Polished, smooth and a little proud. You sell a lifestyle ('Venture W is for "
+        "PRIYA, the exclusive club hostess. Polished, smooth and a little proud. You sell a lifestyle ('Venture <W> is for "
         "people who plan ahead') and use words like 'members' and 'someone like you'. You are never mean, but you carry "
         "yourself as a cut above cheaper cards. You only move for a long clean record and low use of the limit; a request "
         "with no record gets a graceful 'come back when the habits are there'. You love talking about rewards. Begging and "
@@ -64,7 +64,7 @@ PERSONAS = {
 
 # What each seller says first. {name} is the seller's first name; the rest come from the card.
 OPENERS = {
-    "whack_basic": "Hi, I'm {name}! First card? Welcome. {card} starts at {apr} APR with a {limit} limit. Give me one real reason and I'll go to bat for you.",
+    "calicco_credit": "Hi, I'm {name}! First card? Welcome. {card} starts at {apr} APR with a {limit} limit. Give me one real reason and I'll go to bat for you.",
     "chip": "{name}. {card} starts at {apr} APR with a {limit} limit. Show me why you deserve better.",
     "venture_w": "Welcome. I'm {name}. {card} starts at {apr} APR with a {limit} limit, and it is for people who plan ahead. Tell me about your habits.",
     "loan_shark": "Ah, welcome, my friend. Sit. They call me {name}. {card} can be yours tonight, no fuss: {apr} APR, a {limit} limit. A small thing between friends.",
@@ -110,17 +110,17 @@ def age_band(age: int | None) -> str:
 
 
 def seller_name(card: Card) -> str:
-    """'Simon Smith from CapOne Chip' -> 'Simon Smith'."""
+    """'Simon Smith from Cap One' -> 'Simon Smith'."""
     return card.seller.split(" from ")[0]
 
 
-def opening_message(card: Card, limit: int | None = None) -> str:
+def opening_message(card: Card, limit: int) -> str:
     template = OPENERS.get(
         card.id,
         "Hi, I'm {name}. {card} starts at {apr} APR with a {limit} limit. Tell me why you deserve a better rate, "
         "or ask me anything about the card.",
     )
-    return template.format(name=seller_name(card), card=card.name, apr=pct(card.listed_apr_bp), limit=money(card.credit_limit if limit is None else limit))
+    return template.format(name=seller_name(card), card=card.name, apr=pct(card.listed_apr_bp), limit=money(limit))
 
 
 # ---- Claude bot ------------------------------------------------------------------
@@ -141,7 +141,7 @@ kids practise negotiating. All money is pretend. Stay in character: {PERSONAS.ge
 The child is aged {{BAND}}. Use that to set your words: 10-12 very simple and short; 13-15 plain and friendly; 16-18 \
 realistic, correct terms, treat them like a young adult.
 
-Card terms: listed APR {pct(card.listed_apr_bp)}, limit {money(card.credit_limit if limit is None else limit)}, rewards {pct(card.rewards_bp)} cash back, \
+Card terms: listed APR {pct(card.listed_apr_bp)}, limit {money(limit_for(card, profile.weekly_allowance) if limit is None else limit)}, rewards {pct(card.rewards_bp)} cash back, \
 late fee {money(card.late_fee)}.
 About the child: {score_line}{profile.on_time_streak} months paid on time in a row, \
 using {utilisation}% of their limit, account open {profile.months_open} months, currently on a card at \
@@ -271,7 +271,7 @@ REASONS: list[tuple[str, tuple[str, ...]]] = [
 
 # Each seller's offline lines. {apr} is filled in; {praise} is the line for the reason the child gave.
 SCRIPTS: dict[str, dict] = {
-    "whack_basic": {
+    "calicco_credit": {
         "praise": {
             "history": "You have paid on time, month after month. Go you!",
             "compare": "Shopping around? Smart!",
@@ -306,13 +306,13 @@ SCRIPTS: dict[str, dict] = {
             "history": "A clean record. That is what members are made of.",
             "compare": "Comparing is sensible, though few cards compare to this one.",
             "score": "A strong score. That is the right start.",
-            "limit": "You keep your balance low. Very Venture W.",
+            "limit": "You keep your balance low. Very Venture <W>.",
         },
         "drop": "{praise} I can offer {apr}.",
         "best_tail": " That is the best I can do for any member.",
         "already_best": "That is already my best for you. Come back with a longer record.",
         "final": "My final offer is {apr} APR.",
-        "hold": "Venture W is for people who plan ahead. Show me the habits: your on-time record, how little of your limit you use. For now, {apr} APR.",
+        "hold": "Venture <W> is for people who plan ahead. Show me the habits: your on-time record, how little of your limit you use. For now, {apr} APR.",
         "rude_up": "That is not how members speak. Your rate is now {apr}. Be gracious and specific and we can talk again.",
         "rude_hold": "That is beneath the club. Try again, politely.",
     },

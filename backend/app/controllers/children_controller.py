@@ -17,7 +17,7 @@ from app.models.user import (
 )
 from sqlmodel import col, delete, select
 
-from app.models.card import STARTER_CARD_ID, CreditProfile, get_card
+from app.models.card import CreditProfile
 from app.models.credit import CreditEntry, Statement
 from app.models.decor import DecorPlacement
 from app.models.help import HelpMessage
@@ -72,7 +72,6 @@ def add_child(data: ChildCreate, parent: CurrentParent, session: SessionDep) -> 
         weekly_allowance=data.weekly_allowance,
         app_experience=data.app_experience,
         card_type=data.card_type,
-        starting_credit_limit=data.starting_credit_limit,
     )
     assert child.id is not None
     replace_weekly_items(session, child.id, data.weekly_items)
@@ -94,13 +93,6 @@ def update_child(child_id: int, data: ChildUpdate, parent: CurrentParent, sessio
         child.card_type = data.card_type
     if data.password is not None:
         child.hashed_password = hash_password(data.password)
-    if "starting_credit_limit" in data.model_fields_set:  # null is a real value here: back to the card's own limit
-        child.starting_credit_limit = data.starting_credit_limit
-        profile = session.get(CreditProfile, child_id)
-        starter = get_card(session, STARTER_CARD_ID)
-        if profile is not None and starter is not None and profile.current_card_id == STARTER_CARD_ID:
-            profile.credit_limit = data.starting_credit_limit or starter.credit_limit  # still on that card: change it now
-            session.add(profile)
     if data.weekly_items is not None:
         replace_weekly_items(session, child_id, data.weekly_items)
     if data.milestones is not None:

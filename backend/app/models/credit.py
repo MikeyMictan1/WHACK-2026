@@ -28,7 +28,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlmodel import Field, Session, SQLModel, col, func, select
 
-from app.models.card import Card, CreditProfile
+from app.models.card import Card, CreditProfile, allowed_ids
 from app.models.score import ScoreChange, init_score, update_for_month, utilisation_bp_of
 from app.models.shop import add_entry, balance_of
 from app.models.user import User
@@ -190,6 +190,10 @@ def post_entry(
 def purchase_block_reason(session: Session, profile: CreditProfile, price: int, *, at_tap: bool) -> str | None:
     """Why this purchase cannot go through right now, or None if it can."""
     if is_credit(profile):
+        allowed = allowed_ids(profile)
+        if allowed is not None and profile.current_card_id not in allowed:
+            # The parent turned this card off while the child still owed on it: pay it off or change plan first.
+            return "Your parent has turned this card off. Pay off what you owe or change plan to spend again."
         left = available_credit(profile)
         if price > left:
             lead = "Declined: that" if at_tap else "That"

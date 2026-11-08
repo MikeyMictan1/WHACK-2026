@@ -24,7 +24,7 @@ from app.core.led_skins import DEFAULT_SKIN, SKINS, Ctx, render, to_hex
 from app.core.unicorn import UnicornError, unicorn
 from app.models.clock import site_offset
 from app.models.led import RewardSkin, ensure_skin_rewards, latest_equip, owned_skins, set_equip
-from app.models.shop import PurchaseRequest, Reward, balance_of
+from app.models.shop import PurchaseRequest, Reward, balance_of, price_for, scaled_price
 from app.models.user import User
 
 router = APIRouter(prefix="/led", tags=["led"])
@@ -84,7 +84,7 @@ def context_for(session: Session, user: User | None) -> Ctx:
     goal = next((m for m in milestones if m.id not in bought), None)
     if goal:
         ctx.goal_title = goal.title
-        ctx.goal_progress = min(1.0, ctx.balance / goal.price)
+        ctx.goal_progress = min(1.0, ctx.balance / max(1, price_for(goal, user.weekly_allowance)))
     return ctx
 
 
@@ -238,7 +238,8 @@ def wardrobe(user: CurrentUser, session: SessionDep) -> list[dict[str, object]]:
                 "key": s.key,
                 "name": s.name,
                 "description": s.description,
-                "price": s.price,
+                # A child sees their own price: presets scale with their weekly allowance.
+                "price": scaled_price(s.price, user.weekly_allowance) if user.role == "child" else s.price,
                 "owned": s.key in owned,
                 "showing": s.key == display.skin,
                 "reward_id": shop_items.get(s.key),

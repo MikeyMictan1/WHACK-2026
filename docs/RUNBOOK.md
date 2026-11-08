@@ -68,8 +68,8 @@ npm run seed:reset    # erase EVERY table, then add them again (works while the 
 | Account | Login | What it is |
 | --- | --- | --- |
 | Parent | `demo_parent` / `whack-demo-1` | Has example rewards and chores, sees both kids |
-| Child | `demo_kid` / `1234` | Younger kid on the starter card (Whack Basic) |
-| Child | `demo_teen` / `1234` | Older kid with a stronger record (can unlock Venture W) |
+| Child | `demo_kid` / `1234` | Younger kid on the starter card (CaliccoCredit) |
+| Child | `demo_teen` / `1234` | Older kid with a stronger record (can unlock Venture <W>) |
 | Admin | `admin` / `ADMIN_PASSWORD` | Built in; moves the site clock and sees every family |
 
 Each kid starts with some money. Kids are created by their parent (dashboard → Add child) and log

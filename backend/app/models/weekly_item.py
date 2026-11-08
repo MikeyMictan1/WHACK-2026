@@ -2,6 +2,8 @@
 
 from sqlmodel import Field, Session, SQLModel, delete, select
 
+from app.models.shop import Reward
+
 # ---- Table -----------------------------------------------------------------
 
 
@@ -48,3 +50,45 @@ def replace_weekly_items(session: Session, child_id: int, items: list[WeeklyItem
 
 def delete_weekly_items(session: Session, child_id: int) -> None:
     session.exec(delete(WeeklyItem).where(WeeklyItem.child_id == child_id))  # type: ignore[call-overload]
+
+
+def sync_weekly_rewards(session: Session, child_id: int, parent_id: int) -> None:
+    """Put the child's weekly items in their shop: one Reward each (kind "weekly", `child_id` set).
+
+    Matched by name, so editing a price or limit keeps this week's purchase count. Items taken off the
+    list are hidden (kept for purchase history). Called whenever the child's shop is read. Commits.
+    """
+    items = {i.name.strip().lower(): i for i in list_weekly_items(session, child_id)}
+    rewards = session.exec(select(Reward).where(Reward.child_id == child_id).order_by(Reward.id)).all()  # type: ignore[arg-type]
+    seen: set[str] = set()
+    changed = False
+    for r in rewards:
+        key = r.title.strip().lower()
+        item = items.get(key)
+        if item is None or key in seen:
+            if r.active:
+                r.active = False
+                session.add(r)
+                changed = True
+            continue
+        seen.add(key)
+        if (r.title, r.price, r.weekly_limit, r.active, r.parent_id) != (item.name, item.cost, item.weekly_limit, True, parent_id):
+            r.title, r.price, r.weekly_limit, r.active, r.parent_id = item.name, item.cost, item.weekly_limit, True, parent_id
+            session.add(r)
+            changed = True
+    for key, item in items.items():
+        if key not in seen:
+            session.add(
+                Reward(
+                    parent_id=parent_id,
+                    child_id=child_id,
+                    title=item.name,
+                    description="From your weekly list",
+                    price=item.cost,
+                    kind="weekly",
+                    weekly_limit=item.weekly_limit,
+                )
+            )
+            changed = True
+    if changed:
+        session.commit()

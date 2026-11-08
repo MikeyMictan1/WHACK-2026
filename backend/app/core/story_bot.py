@@ -57,7 +57,7 @@ def facts_text(session: Session, child: User) -> tuple[str, dict]:
     if f["on_credit"]:
         lines.append(f"Card: {f['card']} at {pct(f['apr_bp'])} APR, limit {money(f['limit'])}, you owe {money(f['owed'])} ({f['utilisation_pct']}% of the limit)")
     else:
-        lines.append("Card: Debit (spends only their own money)")
+        lines.append("Card: DeerDebit (spends only their own money)")
     s = f["st"]
     lines.append(
         f"Statement {s['number']}: purchases {money(s['purchases'])}, carried over {money(s['carried'])}, interest {money(s['interest'])}, "

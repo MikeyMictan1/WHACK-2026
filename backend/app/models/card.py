@@ -6,24 +6,30 @@ The card numbers follow docs/DESIGN.md section 6.1. The names are placeholders a
 
 from datetime import UTC, datetime
 
+from sqlalchemy import text
 from sqlmodel import Field, Session, SQLModel, select
 
 from app.models.score import init_score, utilisation_bp_of
+from app.models.shop import BASE_WEEKLY_INCOME
 from app.models.user import User
 
-STARTER_CARD_ID = "whack_basic"
+STARTER_CARD_ID = "calicco_credit"
+OLD_STARTER_CARD_ID = "whack_basic"  # its id before it was renamed; list_cards moves old data across
 
 # ---- Tables ----------------------------------------------------------------
 
 
 class Card(SQLModel, table=True):
-    id: str = Field(primary_key=True)  # slug, e.g. "whack_basic"
+    id: str = Field(primary_key=True)  # slug, e.g. "calicco_credit"
     name: str
     tier: int  # 0 = debit ... 4 = loan shark (display order)
     pitch: str
     listed_apr_bp: int
     max_discount_bp: int  # the most negotiation can ever take off the listed APR
-    credit_limit: int  # 0 = no credit (debit: you spend your own balance)
+    # The credit limit, as a percentage of the child's weekly allowance (100 = 1x). 0 = no credit (debit:
+    # you spend your own balance). Higher tiers get a bigger multiple. See limit_for().
+    limit_multiplier_pct: int = 0
+    credit_limit: int = 0  # unused (limits were fixed amounts); kept so older databases can still add cards
     min_score: int  # 0 = no score needed
     rewards_bp: int  # cash back on spending, in basis points (100 = 1%)
     late_fee: int  # charged when a payment is late; 0 = this card has no late fee
@@ -32,7 +38,7 @@ class Card(SQLModel, table=True):
     penalty_step_bp: int = 100
     max_penalty_bp: int = 300
     negotiable: bool = True
-    seller: str  # who the child talks to, e.g. "Mia from Whack Basic"
+    seller: str  # who the child talks to, e.g. "Mia from CaliccoCredit"
 
 
 class CreditProfile(SQLModel, table=True):
@@ -48,14 +54,16 @@ class CreditProfile(SQLModel, table=True):
     score_payment: int = -1  # payment history points, 0 to 250. -1 = the score is not set up yet
     score_utilisation: int = 0  # credit used points, 0 to 150
     score_history: int = 0  # length of history points, 0 to 100
-    current_card_id: str = "whack_basic"
+    current_card_id: str = STARTER_CARD_ID
     current_apr_bp: int = 2000  # the APR this child actually pays (a negotiation can change it)
-    credit_limit: int = 2_000
+    credit_limit: int = 2_000  # limit_for(their card, weekly_allowance); kept up to date by get_profile
+    weekly_allowance: int = 0  # a copy of the child's weekly allowance (User.weekly_allowance), set by get_profile
     balance: int = 0  # owed on the card, including purchases not yet on a statement
     monthly_spend: int = 1_500  # a typical month's spending, used only for the rewards estimates
     on_time_streak: int = 0  # statements in a row that were not paid late
     months_open: int = 0
-    # Comma-separated card ids the parent allows. Empty means every card is allowed.
+    # Comma-separated card ids the parent allows. Empty means every card is allowed. A copy of the card types
+    # ticked on the child form (User.card_type), translated by allowed_from_card_type and kept in step by get_profile.
     allowed_card_ids: str = ""
 
     # The child's own clock. It only moves when a parent skips a month (models/credit.advance_month).
@@ -69,29 +77,29 @@ class CreditProfile(SQLModel, table=True):
 
 CARD_SEED: list[Card] = [
     Card(
-        id="debit", name="Debit", tier=0, pitch="Spend only what you have. No borrowing, no interest.",
-        listed_apr_bp=0, max_discount_bp=0, credit_limit=0, min_score=0, rewards_bp=0, late_fee=0,
+        id="debit", name="DeerDebit", tier=0, pitch="Spend only what you have. No borrowing, no interest.",
+        listed_apr_bp=0, max_discount_bp=0, limit_multiplier_pct=0, min_score=0, rewards_bp=0, late_fee=0,
         negotiable=False, seller="Whack Bank",
     ),
     Card(
-        id="whack_basic", name="Whack Basic", tier=1, pitch="The starter card. Small limit, friendly terms.",
-        listed_apr_bp=2000, max_discount_bp=400, credit_limit=2_000, min_score=0, rewards_bp=0,
-        late_fee=0, seller="Mia from Whack Basic",
+        id=STARTER_CARD_ID, name="CaliccoCredit", tier=1, pitch="The starter card. Small limit, friendly terms.",
+        listed_apr_bp=2000, max_discount_bp=400, limit_multiplier_pct=100, min_score=0, rewards_bp=0,
+        late_fee=0, seller="Mia from CaliccoCredit",
     ),
     Card(
-        id="chip", name="CapOne Chip", tier=2, pitch="A step up. A higher limit and a little cash back.",
-        listed_apr_bp=1500, max_discount_bp=300, credit_limit=5_000, min_score=600, rewards_bp=100,
-        late_fee=0, seller="Simon Smith from CapOne Chip",
+        id="chip", name="Cap One", tier=2, pitch="A step up. A higher limit and a little cash back.",
+        listed_apr_bp=1500, max_discount_bp=300, limit_multiplier_pct=150, min_score=600, rewards_bp=100,
+        late_fee=0, seller="Simon Smith from Cap One",
     ),
     Card(
-        id="venture_w", name="Venture W", tier=3, pitch="Best rewards and the lowest rates, for strong scores.",
-        listed_apr_bp=1000, max_discount_bp=200, credit_limit=15_000, min_score=720, rewards_bp=300,
-        late_fee=0, seller="Priya from Venture W",
+        id="venture_w", name="Venture <W>", tier=3, pitch="Best rewards and the lowest rates, for strong scores.",
+        listed_apr_bp=1000, max_discount_bp=200, limit_multiplier_pct=300, min_score=720, rewards_bp=300,
+        late_fee=0, seller="Priya from Venture <W>",
     ),
     Card(
-        id="loan_shark", name="Loan Shark", tier=4, pitch="Instant approval, no questions. Look at the interest.",
-        listed_apr_bp=9000, max_discount_bp=100, credit_limit=10_000, min_score=0, rewards_bp=0,
-        late_fee=500, seller="Linguini from Loan Shark",
+        id="loan_shark", name="The Shark Father", tier=4, pitch="Instant approval, no questions. Look at the interest.",
+        listed_apr_bp=9000, max_discount_bp=100, limit_multiplier_pct=1000, min_score=0, rewards_bp=0,
+        late_fee=500, seller="Linguini from The Shark Father",
         penalty_step_bp=250, max_penalty_bp=500,  # he punishes rudeness hard: up to 5 points above his rate
     ),
 ]
@@ -103,6 +111,9 @@ def list_cards(session: Session) -> list[Card]:
     """All cards in display order. The table is a copy of CARD_SEED: missing rows are added and
     changed values (a new seller name, a tweaked APR) are applied, so editing the seed just works."""
     rows = {c.id: c for c in session.exec(select(Card))}
+    if OLD_STARTER_CARD_ID in rows:
+        _rename_starter_card(session)
+        rows = {c.id: c for c in session.exec(select(Card))}
     changed = False
     for seed in CARD_SEED:
         row = rows.get(seed.id)
@@ -126,17 +137,62 @@ def get_card(session: Session, card_id: str) -> Card | None:
     return session.get(Card, card_id)
 
 
-def card_limit_for(session: Session, card: Card, user_id: int) -> int:
-    """The credit limit this child gets on this card.
+def _rename_starter_card(session: Session) -> None:
+    """One-off: the starter card was called Whack Basic (id "whack_basic"). Move every reference to the new id."""
+    old, new = OLD_STARTER_CARD_ID, STARTER_CARD_ID
+    for sql in (
+        "UPDATE creditprofile SET current_card_id = :new WHERE current_card_id = :old",
+        # allowed_card_ids is a comma-separated list: pad it with commas so only whole ids match.
+        "UPDATE creditprofile SET allowed_card_ids = TRIM(REPLACE(',' || allowed_card_ids || ',', ',' || :old || ',', "
+        "',' || :new || ','), ',') WHERE ',' || allowed_card_ids || ',' LIKE '%,' || :old || ',%'",
+        "UPDATE statement SET card_id = :new WHERE card_id = :old",
+        "UPDATE negotiationsession SET from_card_id = :new WHERE from_card_id = :old",
+        "UPDATE negotiationsession SET to_card_id = :new WHERE to_card_id = :old",
+        "DELETE FROM card WHERE id = :old",  # list_cards adds the renamed card from CARD_SEED
+    ):
+        session.connection().execute(text(sql), {"old": old, "new": new})
+    session.commit()
 
-    A parent can set a starting limit for their child, and it applies to the starter card (Whack Basic) only. Every
-    other card keeps its own limit: a bigger limit is part of what unlocking a better card earns.
-    """
-    if card.id == STARTER_CARD_ID:
-        user = session.get(User, user_id)
-        if user is not None and user.starting_credit_limit:
-            return user.starting_credit_limit
-    return card.credit_limit
+
+# The child form's card type values (frontend/src/dashboard/childrenApi.ts CARD_TYPE_OPTIONS) -> card ids.
+FORM_CARD_TYPES = {
+    "deer_debit": "debit",
+    "calicco_credit": STARTER_CARD_ID,
+    "cap_one": "chip",
+    "venture_w": "venture_w",
+    "shark_father": "loan_shark",
+}
+
+
+def allowed_from_card_type(card_type: str | None) -> str:
+    """The child form's ticked card types as allowed card ids (comma-separated). "" = no choice saved: all cards."""
+    picked = {FORM_CARD_TYPES[v.strip()] for v in (card_type or "").split(",") if v.strip() in FORM_CARD_TYPES}
+    return ",".join(c.id for c in CARD_SEED if c.id in picked)  # in tier order
+
+
+def _placement_card(session: Session, allowed: set[str]) -> Card | None:
+    """Where a child goes when their card is not allowed: the starter card if it is, else the lowest allowed card."""
+    cards = [c for c in list_cards(session) if c.id in allowed]
+    return next((c for c in cards if c.id == STARTER_CARD_ID), cards[0] if cards else None)
+
+
+MIN_CREDIT_LIMIT = 100  # 1.00 WC: a credit card always has some limit, even on a tiny allowance
+
+
+def limit_for(card: Card, weekly_allowance: int) -> int:
+    """This card's credit limit for a child with this weekly allowance: CaliccoCredit 1x, Cap One 1.5x,
+    Venture <W> 3x, The Shark Father 10x. 0 for DeerDebit. No allowance set counts as 10.00 WC a week, like the shop's
+    preset prices (shop.scaled_price)."""
+    if card.limit_multiplier_pct <= 0:
+        return 0
+    weekly = weekly_allowance or BASE_WEEKLY_INCOME
+    return max(MIN_CREDIT_LIMIT, weekly * card.limit_multiplier_pct // 100)
+
+
+def card_limit_for(session: Session, card: Card, user_id: int) -> int:
+    """The credit limit this child gets on this card: a multiple of their weekly allowance (see limit_for)."""
+    user = session.get(User, user_id)
+    return limit_for(card, (user.weekly_allowance or 0) if user else 0)
 
 
 def get_profile(session: Session, user_id: int) -> CreditProfile:
@@ -177,6 +233,25 @@ def get_profile(session: Session, user_id: int) -> CreditProfile:
     if profile.score_payment < 0:
         # Made before scores were calculated (it carried a placeholder number): set it up from the account as it is now.
         init_score(profile, utilisation_bp_of(profile.balance, profile.credit_limit))
+        session.add(profile)
+        session.commit()
+        session.refresh(profile)
+    # Follow the parent's settings on the child form: the cards they ticked and the weekly allowance (the limit).
+    child = session.get(User, user_id)
+    before = (profile.allowed_card_ids, profile.current_card_id, profile.weekly_allowance, profile.credit_limit)
+    profile.allowed_card_ids = allowed_from_card_type(child.card_type if child else None)
+    allowed = allowed_ids(profile)
+    if allowed is not None and profile.current_card_id not in allowed and profile.balance <= 0:
+        # Their card was turned off and they owe nothing on it: move them (not their monthly plan change).
+        # If they owe money they keep it until they pay it off or switch.
+        if target := _placement_card(session, allowed):
+            profile.current_card_id = target.id
+            profile.current_apr_bp = target.listed_apr_bp
+    profile.weekly_allowance = (child.weekly_allowance or 0) if child else 0
+    card = get_card(session, profile.current_card_id)
+    if card is not None:
+        profile.credit_limit = limit_for(card, profile.weekly_allowance)
+    if (profile.allowed_card_ids, profile.current_card_id, profile.weekly_allowance, profile.credit_limit) != before:
         session.add(profile)
         session.commit()
         session.refresh(profile)

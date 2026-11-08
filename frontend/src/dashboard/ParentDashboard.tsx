@@ -146,7 +146,7 @@ export function ParentDashboard({ parent }: { parent: User }) {
                   )}
                 </div>
 
-                <ChildStats credit={credit[child.id]} balance={balances[child.id] ?? 0} limit={child.starting_credit_limit} />
+                <ChildStats credit={credit[child.id]} balance={balances[child.id] ?? 0} />
 
                 {editingId === child.id && (
                   <div className="mt-6 border-t border-line pt-6">
@@ -180,7 +180,7 @@ export function ParentDashboard({ parent }: { parent: User }) {
 }
 
 /** What matters about one child's card at a glance. Dates are the child's own: they move when you skip a month. */
-function ChildStats({ credit, balance, limit }: { credit: ChildCredit | undefined; balance: number; limit?: number | null }) {
+function ChildStats({ credit, balance }: { credit: ChildCredit | undefined; balance: number }) {
   if (!credit) return <Skeleton className="mt-5 h-14 w-full" />
   const payable = credit.statement_number !== null && credit.status === 'open' && (credit.statement_remaining ?? 0) > 0
   const next = !credit.has_credit
@@ -190,7 +190,7 @@ function ChildStats({ credit, balance, limit }: { credit: ChildCredit | undefine
       : 'Nothing to pay'
   const stats: { label: string; value: string; note?: string }[] = [
     { label: 'Balance', value: formatMoney(balance) },
-    { label: credit.card_name, value: credit.has_credit ? `Owes ${formatMoney(credit.owed)}` : 'Debit', note: limit ? `starts at ${formatMoney(limit)} limit` : undefined },
+    { label: credit.card_name, value: credit.has_credit ? `Owes ${formatMoney(credit.owed)}` : 'Debit' },
   ]
   if (credit.score !== null) {
     const change = credit.score_change

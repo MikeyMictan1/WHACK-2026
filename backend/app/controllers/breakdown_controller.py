@@ -56,7 +56,6 @@ class BreakdownOut(BaseModel):
     child_id: int
     child_name: str
     username: str
-    starting_credit_limit: int | None
     score_tracking: bool  # the parent's setting for this child; the history below is shown to the parent either way
     summary: CreditSummary
     score: ScoreInfo
@@ -102,7 +101,6 @@ def child_breakdown(child_id: int, parent: CurrentParent, session: SessionDep) -
         child_id=child.id,
         child_name=child.display_name or child.username,
         username=child.username,
-        starting_credit_limit=child.starting_credit_limit,
         score_tracking=score_enabled(child.app_experience),
         summary=summary,
         score=summary.score,

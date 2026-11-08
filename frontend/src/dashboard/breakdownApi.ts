@@ -22,7 +22,6 @@ export type Breakdown = {
   child_id: number
   child_name: string
   username: string
-  starting_credit_limit: number | null
   /** The parent's setting for this child. The score is shown to the parent either way. */
   score_tracking: boolean
   summary: CreditSummary

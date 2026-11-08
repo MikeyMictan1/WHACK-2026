@@ -110,7 +110,7 @@ def facts_text(f: dict) -> str:
             f"owes {money(f['owed'])} ({f['utilisation_pct']}% of the limit)"
         )
     else:
-        lines.append("Card: Debit (spends only their own money, no credit)")
+        lines.append("Card: DeerDebit (spends only their own money, no credit)")
     lines.append(f"Months of statements so far: {f['months']}")
     if f["purchase_count"]:
         parts = "; ".join(f"{label} {money(total)} ({count} purchases)" for label, count, total in f["spending"])

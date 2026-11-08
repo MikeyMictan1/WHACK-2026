@@ -5,8 +5,8 @@
 
 Demo logins (play money only, local use):
     parent   demo_parent   whack-demo-1    has example rewards and chores, and sees both kids
-    child    demo_kid      1234            younger kid on the starter card (Whack Basic); credit score tracking off (13+)
-    child    demo_teen     1234            older kid with a stronger record (can unlock Venture W); credit score on
+    child    demo_kid      1234            younger kid on the starter card (CaliccoCredit); credit score tracking off (13+)
+    child    demo_teen     1234            older kid with a stronger record (can unlock Venture <W>); credit score on
 Each kid starts with some money in their balance, so they can buy things and pay statements.
 Use the parent dashboard's "Skip a month" to issue statements.
 """
@@ -34,11 +34,11 @@ CHILDREN = [
         "display_name": "Kit",
         "weekly_allowance": 1000,  # minor units (1/100 WC): 10.00 WC
         "app_experience": "13+",
-        "card_type": "deer_debit,cap_one",
+        "card_type": "deer_debit,shark_father,calicco_credit",  # what the 13+ preset ticks
         "items": [("Ice cream", 300, 2), ("Extra screen time", 500, 1)],
         "milestones": [("New bike", 20000)],
         "start_money": 2000,  # 20.00 WC in their own balance
-        "profile": {},  # a fresh credit account: score 580 (Fair), on Whack Basic, owing nothing. Score tracking is off at 13+
+        "profile": {},  # a fresh credit account: score 580 (Fair), on CaliccoCredit, owing nothing. Score tracking is off at 13+
     },
     {
         "username": "demo_teen",
@@ -46,13 +46,12 @@ CHILDREN = [
         "display_name": "Alex",
         "weekly_allowance": 2500,
         "app_experience": "15+",
-        "card_type": "cap_one,venture_w,shark_father",
+        "card_type": "deer_debit,shark_father,cap_one,venture_w,calicco_credit",  # 15+: every card
         "items": [("Cinema ticket", 800, 1), ("Snacks", 250, 3)],
         "milestones": [("Concert ticket", 12000), ("Headphones", 8000)],
         "start_money": 5000,
-        "starting_credit_limit": 4000,  # the parent gave Alex a 40.00 WC limit on the starter card
         # A record from before the app: six good months of payments on a nine-month-old account (score 715).
-        # One more good month takes it past the 720 that Venture W needs. Score tracking is on at 15+.
+        # One more good month takes it past the 720 that Venture <W> needs. Score tracking is on at 15+.
         "profile": {"on_time_streak": 6, "months_open": 9, "score_payment": 190},
     },
 ]
@@ -90,7 +89,6 @@ def _get_or_create_child(session: Session, parent: User, spec: dict) -> None:
         weekly_allowance=spec["weekly_allowance"],
         app_experience=spec["app_experience"],
         card_type=spec["card_type"],
-        starting_credit_limit=spec.get("starting_credit_limit"),
     )
     assert child.id is not None
     replace_weekly_items(session, child.id, [WeeklyItemInput(name=n, cost=c, weekly_limit=w) for n, c, w in spec["items"]])

@@ -8,7 +8,7 @@ import threading
 
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, or_, select
 
 from app.controllers.deps import CurrentParent, CurrentUser
 from app.controllers.nfc_controller import (
@@ -49,11 +49,13 @@ from app.models.shop import (
     expire_if_stale,
     expires_in,
     open_request_for,
+    price_for,
     set_status_if,
     utcnow,
-    weekly_available_again,
+    weekly_status,
 )
 from app.models.user import User, get_child, list_children
+from app.models.weekly_item import sync_weekly_rewards
 
 router = APIRouter(prefix="/shop", tags=["shop"])
 
@@ -101,23 +103,34 @@ def _request_for(session: Session, user: User, request_id: int) -> PurchaseReque
 
 @router.get("/rewards", response_model=list[RewardPublic])
 def list_rewards(user: CurrentUser, session: SessionDep) -> list[RewardPublic]:
-    """Parent: their catalogue. Child: their parent's catalogue, with weekly availability."""
+    """Parent: their catalogue. Child: their parent's catalogue plus their own weekly items, with weekly availability."""
     owner_id = user.id if user.role == "parent" else user.parent_id
     if owner_id is not None:
         ensure_skin_rewards(session, owner_id)  # LED skins appear in every family's shop
-    skins_owned = owned_skins(session, user) if user.role == "child" else set()
+    is_child = user.role == "child" and owner_id is not None
+    if is_child:
+        assert user.id is not None and owner_id is not None
+        sync_weekly_rewards(session, user.id, owner_id)  # the weekly items their parent set on the child form
+    skins_owned = owned_skins(session, user) if is_child else set()
+    # Family items for everyone; a child's own weekly items only for that child.
+    visible = or_(col(Reward.child_id).is_(None), col(Reward.child_id) == user.id) if is_child else col(Reward.child_id).is_(None)
     rewards = session.exec(
-        select(Reward).where(Reward.parent_id == owner_id, col(Reward.active)).order_by(col(Reward.price))
+        select(Reward).where(Reward.parent_id == owner_id, col(Reward.active), visible).order_by(col(Reward.price))
     ).all()
     out = []
     for r in rewards:
         assert r.id is not None
-        again = None
-        if user.role == "child" and r.kind == "weekly":
+        left, again = None, None
+        if is_child and r.kind == "weekly":
             assert user.id is not None
-            again = weekly_available_again(session, user.id, r.id)
+            left, again = weekly_status(session, user.id, r)
         owned = r.kind == "led_skin" and skin_for_reward(session, r.id) in skins_owned
-        out.append(RewardPublic(**r.model_dump(), available_again_at=again, owned=owned))
+        public = RewardPublic(**r.model_dump(), left_this_week=left, available_again_at=again, owned=owned)
+        if is_child:
+            public.price = price_for(r, user.weekly_allowance)  # presets scale with this child's allowance
+        out.append(public)
+    if is_child:
+        out.sort(key=lambda p: p.price)
     return out
 
 
@@ -217,25 +230,35 @@ def give_bonus(data: BonusCreate, parent: CurrentParent, session: SessionDep) ->
 @router.post("/requests", response_model=PurchaseRequestPublic, status_code=status.HTTP_201_CREATED)
 def request_purchase(data: PurchaseRequestCreate, user: CurrentUser, session: SessionDep) -> PurchaseRequestPublic:
     child = _require_child(user)
-    assert child.id is not None
+    assert child.id is not None and child.parent_id is not None
+    sync_weekly_rewards(session, child.id, child.parent_id)  # the parent may have changed the weekly list
     reward = session.get(Reward, data.reward_id)
-    if reward is None or reward.parent_id != child.parent_id or not reward.active:
+    if (
+        reward is None
+        or reward.parent_id != child.parent_id
+        or reward.child_id not in (None, child.id)
+        or not reward.active
+    ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "That item isn't in your shop")
     assert reward.id is not None
 
     if open_request_for(session, child.id):
         raise HTTPException(status.HTTP_409_CONFLICT, "You already have a purchase in progress")
-    if reward.kind == "weekly" and (again := weekly_available_again(session, child.id, reward.id)):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"You can buy this again on {again:%A %d %B}")
+    if reward.kind == "weekly":
+        left, again = weekly_status(session, child.id, reward)
+        if left == 0 and again is not None:
+            times = "once" if reward.weekly_limit == 1 else f"{reward.weekly_limit} times"
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, f"You can buy this {times} a week. Next one on {again:%A %d %B}"
+            )
     if reward.kind == "led_skin" and skin_for_reward(session, reward.id) in owned_skins(session, child):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "You already own this skin")
     profile = get_profile(session, child.id)
-    if reason := purchase_block_reason(session, profile, reward.price, at_tap=False):
+    price = price_for(reward, child.weekly_allowance)  # fixed now: the request keeps this price
+    if reason := purchase_block_reason(session, profile, price, at_tap=False):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, reason)
 
-    req = PurchaseRequest(
-        child_id=child.id, reward_id=reward.id, title=reward.title, price=reward.price, kind=reward.kind
-    )
+    req = PurchaseRequest(child_id=child.id, reward_id=reward.id, title=reward.title, price=price, kind=reward.kind)
     session.add(req)
     session.commit()
     session.refresh(req)
