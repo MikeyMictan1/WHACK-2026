@@ -18,7 +18,8 @@ The user is on Windows. Project scripts are bash and run from Git Bash at the re
 - Vite proxies `/api/*` to the backend, so the frontend always calls relative `/api/...` paths
 - Preview configs for the browser pane are in `.claude/launch.json` (`frontend`, `backend`, `dev`)
 
-How the scripts work and how to troubleshoot them: [RUNBOOK.md](RUNBOOK.md).
+Setup, running, demo accounts, settings, hardware, phones, deploying (Railway), the laptop bridge
+and troubleshooting: [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 `fastapi dev` hot-reloads the backend and Vite hot-reloads the frontend, so after editing code
 there's no need to restart. Restart only after changing `backend/.env` or installing packages.
