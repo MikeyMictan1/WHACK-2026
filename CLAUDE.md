@@ -107,6 +107,10 @@ AI. The old paths redirect.
   `pending -> approved -> paid`; `/shop/requests/{id}/pay` blocks up to 30 s waiting for a tap on
   the reader (`?simulate=true` skips it). A child's first card used to pay gets linked (`CardLink`).
   New parents get example rewards/chores (`STARTER_REWARDS`). Parent screens poll every 2-3 s.
+- **Weekly items:** the per-child list on the child form (`WeeklyItem`) reaches the shop as `Reward` rows with
+  `child_id` set, made by `weekly_item.sync_weekly_rewards` whenever that child's shop is read (matched by name).
+  Only that child sees them; the parent's catalogue lists `child_id IS NULL` rows. A weekly reward can be bought
+  `weekly_limit` times in any 7 days (`shop.weekly_status`); family weekly rewards have a limit of 1.
 - **Backend hot reload can hang** (open SSE streams / the NFC thread). If an endpoint change doesn't
   show up, run `scripts/backend-restart`.
 - **Auth is a cookie**, not a header. `api()` sends `credentials: 'include'`; don't add

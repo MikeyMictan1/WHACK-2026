@@ -154,6 +154,11 @@ function RewardCard({
       <p className="meta">{formatMoney(reward.price)}</p>
       <h3 className="mt-2 text-d4 font-medium">{reward.title}</h3>
       {reward.description && <p className="mt-2 text-sm text-muted">{reward.description}</p>}
+      {reward.kind === 'weekly' && reward.left_this_week !== null && (
+        <p className="meta mt-2">
+          {reward.weekly_limit === 1 ? 'Once a week' : `${reward.left_this_week} of ${reward.weekly_limit} left this week`}
+        </p>
+      )}
 
       {reward.kind === 'milestone' && (
         <div className="mt-4">

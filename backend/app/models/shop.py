@@ -42,6 +42,10 @@ class Reward(SQLModel, table=True):
     kind: str = "in_game"  # RewardKind
     active: bool = True  # removed items are hidden, kept for history
     created_at: datetime = Field(default_factory=utcnow)
+    # Set: one child's own weekly item (mirrored from the child form by weekly_item.sync_weekly_rewards).
+    # Only that child sees it; it is not in the parent's catalogue.
+    child_id: int | None = Field(default=None, foreign_key="user.id", index=True)
+    weekly_limit: int = 1  # weekly items: how many times a child can buy it in any 7 days
 
 
 class Chore(SQLModel, table=True):
@@ -113,8 +117,10 @@ class RewardPublic(SQLModel):
     description: str
     price: int
     kind: str
-    # Child view only: weekly items can be bought once a week.
-    available_again_at: datetime | None = None
+    weekly_limit: int = 1
+    # Child view only: weekly items can be bought `weekly_limit` times in any 7 days.
+    left_this_week: int | None = None
+    available_again_at: datetime | None = None  # when the next one frees up, if none are left
     # Child view only: one-off items (LED skins) they already have.
     owned: bool = False
 
@@ -238,18 +244,20 @@ def expires_in(req: PurchaseRequest) -> int | None:
     return max(0, int((_expires_at(req) - utcnow()).total_seconds()))
 
 
-def weekly_available_again(session: Session, child_id: int, reward_id: int) -> datetime | None:
-    """When a weekly item can next be bought by this child, or None if it can be bought now."""
-    last = session.exec(
-        select(PurchaseRequest)
-        .where(PurchaseRequest.child_id == child_id, PurchaseRequest.reward_id == reward_id)
-        .where(col(PurchaseRequest.status) == "paid")
+def weekly_status(session: Session, child_id: int, reward: Reward) -> tuple[int, datetime | None]:
+    """A weekly item for this child: (buys left in the last 7 days, when the next one frees up if none are)."""
+    limit = max(1, reward.weekly_limit)
+    paid = session.exec(
+        select(PurchaseRequest.paid_at)
+        .where(PurchaseRequest.child_id == child_id, PurchaseRequest.reward_id == reward.id)
+        .where(col(PurchaseRequest.status) == "paid", col(PurchaseRequest.paid_at).is_not(None))
         .order_by(col(PurchaseRequest.paid_at).desc())
-    ).first()
-    if last is None or last.paid_at is None:
-        return None
-    again = last.paid_at + WEEKLY_COOLDOWN
-    return again if again > utcnow() else None
+        .limit(limit)
+    ).all()
+    now = utcnow()
+    recent = [t for t in paid if t is not None and t + WEEKLY_COOLDOWN > now]
+    left = max(0, limit - len(recent))
+    return left, (None if left else min(recent) + WEEKLY_COOLDOWN)
 
 
 def open_request_for(session: Session, child_id: int) -> PurchaseRequest | None:

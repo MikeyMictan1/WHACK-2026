@@ -6,7 +6,7 @@ export type ChoreKind = 'chore' | 'extracurricular'
 export const REWARD_KINDS: { kind: RewardKind; label: string; note: string }[] = [
   { kind: 'led_skin', label: 'LED skins', note: 'New looks for your LED screen. Equip them in LED Home' },
   { kind: 'in_game', label: 'In-game', note: 'Themes, icons and decor' },
-  { kind: 'weekly', label: 'Weekly', note: 'Small treats, once a week each' },
+  { kind: 'weekly', label: 'Weekly', note: 'Small treats, a few times a week at most' },
   { kind: 'milestone', label: 'Milestones', note: 'Big goals to save up for' },
 ]
 
@@ -21,7 +21,11 @@ export type Reward = {
   description: string
   price: number
   kind: RewardKind
-  /** Weekly items: when this child can buy it again (null = now). */
+  /** Weekly items: how many times a child can buy it in any 7 days. */
+  weekly_limit: number
+  /** Weekly items, child view: buys left this week. */
+  left_this_week: number | null
+  /** Weekly items: when the next one frees up, if none are left (null = can buy now). */
   available_again_at: string | null
   /** LED skins this child already has. */
   owned: boolean
