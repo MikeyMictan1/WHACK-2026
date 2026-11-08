@@ -268,13 +268,74 @@ def mark_presets(session: Session, parent_id: int) -> bool:
 
     Returns True if it changed anything. Caller commits."""
     starters = {(t, d, k) for t, d, _, k in STARTER_REWARDS}
-    changed = False
+    changed = upgrade_starter_decor(session, parent_id)
     for r in session.exec(
         select(Reward).where(Reward.parent_id == parent_id, col(Reward.child_id).is_(None), col(Reward.preset).is_(False))
     ):
         if r.kind == "led_skin" or (r.title, r.description, r.kind) in starters:
             r.preset = True
             session.add(r)
+            changed = True
+    return changed
+
+
+# Old example in-game items that were dropped (no artwork), matched on title and description.
+RETIRED_STARTERS = {
+    ("Mascot party hat", "Decor for your dashboard side panel"),
+    ("Rocket app icon", "A rocket icon for your app"),
+}
+
+
+def upgrade_starter_decor(session: Session, parent_id: int) -> bool:
+    """Bring a family's example in-game items in line with STARTER_REWARDS. Safe to run on every request.
+
+    - hides the retired examples (party hat, rocket icon);
+    - hides duplicate copies of the same item (two requests adding at once), keeping the one a child has
+      bought if any, else the oldest;
+    - adds any example the family never had. Removed items stay removed (an inactive row counts as had).
+    Caller commits."""
+    starters = {t: (d, p) for t, d, p, k in STARTER_REWARDS if k == "in_game"}
+    rows = session.exec(
+        select(Reward)
+        .where(Reward.parent_id == parent_id, col(Reward.child_id).is_(None), Reward.kind == "in_game")
+        .order_by(col(Reward.id))
+    ).all()
+    if not rows:  # a family that removed every example (or never had them) gets none back
+        return False
+    bought = set(
+        session.exec(
+            select(PurchaseRequest.reward_id).where(
+                col(PurchaseRequest.reward_id).in_([r.id for r in rows]), PurchaseRequest.status == "paid"
+            )
+        ).all()
+    )
+    changed = False
+
+    def hide(r: Reward) -> None:
+        nonlocal changed
+        r.active = False
+        session.add(r)
+        changed = True
+
+    keep: dict[str, Reward] = {}
+    for r in rows:
+        if not r.active:
+            continue
+        if (r.title, r.description) in RETIRED_STARTERS:
+            hide(r)
+        elif r.title in starters:
+            other = keep.get(r.title)
+            if other is None:
+                keep[r.title] = r
+            elif r.id in bought and other.id not in bought:
+                hide(other)
+                keep[r.title] = r
+            else:
+                hide(r)
+    have = {r.title for r in rows}
+    for title, (description, price) in starters.items():
+        if title not in have:
+            session.add(Reward(parent_id=parent_id, title=title, description=description, price=price, kind="in_game", preset=True))
             changed = True
     return changed
 
@@ -342,8 +403,10 @@ def check_card(session: Session, child_id: int, uid: str) -> None:
 
 STARTER_REWARDS: list[tuple[str, str, int, RewardKind]] = [
     ("Dark mode theme", "Switch your dashboard to dark mode", 150, "in_game"),
-    ("Rocket app icon", "A rocket icon for your app", 100, "in_game"),
-    ("Mascot party hat", "Decor for your dashboard side panel", 80, "in_game"),
+    ("Potted plant", "A leafy plant (and a small dinosaur) for your dashboard", 80, "in_game"),
+    ("Arcade machine", "A retro arcade cabinet for your dashboard", 150, "in_game"),
+    ("Calico cat", "A cat to keep your dashboard company", 100, "in_game"),
+    ("Trading screens", "Stock charts for your dashboard, like a real trader", 120, "in_game"),
     ("Cinema trip", "One film at the weekend", 800, "weekly"),
     ("Snack of your choice", "Pick any snack from the shop", 200, "weekly"),
     ("Extra hour of gaming", "One extra hour this week", 300, "weekly"),

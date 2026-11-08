@@ -1,30 +1,35 @@
 @import "tailwindcss";
 
 /*
-  Palette: white into light blue, ink for text,
-  acid lime as the single highlight (closing band, hover on primary actions).
-  Type: Outfit (as on ubiasCV) for everything, light at hero scale, regular/medium below it.
-        No second typeface: --font-mono points at Outfit too, so code paths match the page.
-  Shape: square corners everywhere, no shadows, no glass. Surfaces are solid
-  and separated by 1px rules. See ../../../vibe-code.md for what to avoid.
+  Teenacredit palette: card blue, white, and red as the one highlight (think of the ChipOne card).
+  Blue bands carry headers and the footer; content sits on white. Red is for the accent and hover
+  on primary actions, used sparingly.
+  Type: Outfit for everything. No second typeface: --font-mono points at Outfit too.
+  Shape: square corners, no shadows, no glass, no blur. Surfaces are solid and separated by 1px
+  rules. See ../../../.claude/vibe-code.md for what to avoid.
 */
 @theme {
   --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Outfit", ui-sans-serif, system-ui, sans-serif;
 
-  --color-ink: #0b1a2e;
-  --color-ink-2: #1d3050;
+  --color-ink: #0a2540;
+  --color-ink-2: #12355c;
   --color-muted: #5b6b80;
-  --color-line: #e2e8f0;
+  --color-line: #dfe6ee;
 
-  --color-paper: #fafbfc;
+  --color-paper: #ffffff;
   --color-white: #ffffff;
-  --color-sky: #e6f0fb;
-  --color-sky-2: #c9dcf0;
-  --color-blush: #fbe3ee;
-  --color-blush-2: #f6b8d1;
+  /* The card blue (sampled from the ChipOne card) and a darker step for hover. */
+  --color-brand: #004878;
+  --color-brand-2: #00365a;
+  --color-sky: #e8f0f7;
+  --color-sky-2: #c9dbea;
+  /* The desk colour in the seller portraits, so the panel runs on from the art. */
+  --color-desk: #3b597f;
 
-  --color-signal: #d4ff3a;
+  /* Red highlight. Kept under the old name so every existing highlight picks it up. */
+  --color-signal: #cb2923;
+  --color-signal-2: #a8211c;
 
   --text-d1: 4.5rem;
   --text-d1--line-height: 1;
@@ -40,7 +45,6 @@
   --text-d4--letter-spacing: -0.015em;
   --text-lead: 1.125rem;
   --text-lead--line-height: 1.6;
-
 }
 
 @layer base {
@@ -64,8 +68,8 @@
   }
 
   ::selection {
-    background: var(--color-signal);
-    color: var(--color-ink);
+    background: var(--color-brand);
+    color: var(--color-white);
   }
 
   :focus-visible {
@@ -110,3 +114,15 @@
   color: var(--color-muted);
 }
 
+
+/* Red surfaces get white text unless a class says otherwise (utilities win over this layer). */
+@layer components {
+  .bg-signal {
+    color: var(--color-white);
+  }
+}
+
+/* Pixel art (the seller portraits) stays crisp when scaled up. */
+@utility pixelated {
+  image-rendering: pixelated;
+}

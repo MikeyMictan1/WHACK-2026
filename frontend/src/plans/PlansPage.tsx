@@ -4,6 +4,7 @@ import { ButtonLink, TextLink } from '../components/ui/Button.tsx'
 import { FormError } from '../components/ui/FormError.tsx'
 import { Skeleton } from '../components/ui/Skeleton.tsx'
 import { money, pct, pctRange } from '../lib/format.ts'
+import { CardImage } from '../card/CardImage.tsx'
 import { plansApi, type CurrentPlan, type PlanOption, type PlansResponse } from './plansApi.ts'
 
 /** /plans: the five cards, side by side in rows, with what each would cost this child. */
@@ -103,7 +104,8 @@ function PlanRow({ option }: { option: PlanOption }) {
   ] as const
 
   return (
-    <li className="grid gap-6 border-b border-ink/15 py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_200px] lg:items-center">
+    <li className="grid gap-6 border-b border-ink/15 py-8 lg:grid-cols-[180px_minmax(0,1fr)_minmax(0,1.6fr)_200px] lg:items-center">
+      <CardImage cardId={option.id} name={option.name} className={`max-w-[260px] ${locked ? 'opacity-50 grayscale' : ''}`} />
       <div>
         <div className="flex flex-wrap items-center gap-3">
           <h3 className={`text-d4 font-medium ${locked ? 'text-muted' : ''}`}>{option.name}</h3>

@@ -43,12 +43,13 @@ export function EarnPage() {
 
   return (
     <>
-      <PageHeader marker="Earn" title="Earn money." description="Do a job, tell your parent, get paid when they approve it." />
+      <PageHeader marker="Earn" title="Missions." description="Pick a mission, do it, tell your parent. You get paid when they approve it." />
 
       <section className="container-x py-10 md:py-14">
         <div className="flex flex-wrap gap-x-8 gap-y-3">
           <TextLink to="/dashboard">Back to dashboard</TextLink>
           <TextLink to="/shop">Go to the shop</TextLink>
+          <TextLink to="/milestones">Your milestones</TextLink>
         </div>
 
         {!chores && (
@@ -58,7 +59,7 @@ export function EarnPage() {
           </div>
         )}
 
-        {chores?.length === 0 && <p className="mt-10 text-muted">No jobs yet. Ask your parent to add some.</p>}
+        {chores?.length === 0 && <p className="mt-10 text-muted">No missions yet. Ask your parent to add some.</p>}
 
         {chores &&
           CHORE_KINDS.map(({ kind, label }) => {
@@ -67,23 +68,24 @@ export function EarnPage() {
             return (
               <div key={kind} className="mt-12">
                 <h2 className="border-b border-ink pb-3 text-d3 font-light">{label}</h2>
-                <ul>
+                <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {items.map((c) => (
-                    <li key={c.id} className="flex flex-wrap items-center justify-between gap-4 border-b border-ink/15 py-5">
-                      <div>
+                    <li key={c.id} className="flex flex-col border border-line bg-white">
+                      <div className="flex items-start justify-between gap-4 bg-brand p-5 text-white">
                         <p className="text-d4 font-medium">{c.title}</p>
-                        <p className="meta mt-1">
-                          Pays {formatMoney(c.amount)}
-                          {c.my_claim_status && ` · ${STATUS_LABEL[c.my_claim_status]}`}
-                        </p>
+                        <p className="shrink-0 text-d4 font-light tabular-nums">+{formatMoney(c.amount)}</p>
                       </div>
-                      <Button
-                        size="sm"
-                        disabled={busy !== null || c.my_claim_status === 'pending'}
-                        onClick={() => claim(c)}
-                      >
-                        {c.my_claim_status === 'pending' ? 'Sent' : 'I did it'}
-                      </Button>
+                      <div className="flex flex-1 flex-col justify-between gap-4 p-5">
+                        <p className="meta">{c.my_claim_status ? STATUS_LABEL[c.my_claim_status] : 'Not done yet'}</p>
+                        <Button
+                          size="sm"
+                          className="w-full"
+                          disabled={busy !== null || c.my_claim_status === 'pending'}
+                          onClick={() => claim(c)}
+                        >
+                          {c.my_claim_status === 'pending' ? 'Sent to your parent' : 'I did it'}
+                        </Button>
+                      </div>
                     </li>
                   ))}
                 </ul>

@@ -7,7 +7,7 @@ export const APP_EXPERIENCE_PRESETS = ['10+', '13+', '15+'] as const
 export const CARD_TYPE_OPTIONS = [
   { value: 'deer_debit', label: 'DeerDebit' },
   { value: 'shark_father', label: 'The Shark Father' },
-  { value: 'cap_one', label: 'Cap One' },
+  { value: 'cap_one', label: 'ChipOne' },
   { value: 'venture_w', label: 'Venture <W>' },
   { value: 'calicco_credit', label: 'CaliccoCredit' },
 ] as const

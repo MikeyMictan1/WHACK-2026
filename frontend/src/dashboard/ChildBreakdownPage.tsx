@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router'
+import { useNavigate, useParams } from 'react-router'
+import { nameOf } from '../auth/types.ts'
+import { creditApi } from '../credit/creditApi.ts'
+import { CURRENCY_LABEL, parseMoney } from '../lib/money.ts'
+import { shopApi } from '../shop/shopApi.ts'
+import { ChildForm } from './ChildForm.tsx'
+import { childrenApi, type Child } from './childrenApi.ts'
+import { skipMessage } from './skipMessage.ts'
 import { PageHeader } from '../components/layout/PageHeader.tsx'
 import { Button, TextLink } from '../components/ui/Button.tsx'
 import { FormError } from '../components/ui/FormError.tsx'
@@ -9,22 +16,79 @@ import { STATUS_LABEL, formatDate } from '../credit/creditApi.ts'
 import { formatMoney } from '../lib/money.ts'
 import { signed } from '../lib/format.ts'
 import { Bar, FactorRow, Reasons, ScoreChart } from '../monthly/ScoreSection.tsx'
+import { CardImage } from '../card/CardImage.tsx'
 import { breakdownApi, type Breakdown, type BreakdownRow, type Recap } from './breakdownApi.ts'
 
-/** A parent's view of one child: the numbers, the score and how it moved, and a written recap. */
+/** A parent's dashboard for one child: actions, the numbers, the score and how it moved, and a written recap. */
 export function ChildBreakdownPage() {
   const { childId } = useParams()
   const id = Number(childId)
+  const navigate = useNavigate()
   const [data, setData] = useState<Breakdown | null>(null)
+  const [child, setChild] = useState<Child | null>(null)
+  const [editing, setEditing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [writing, setWriting] = useState(false)
+
+  function reload() {
+    breakdownApi
+      .get(id)
+      .then(setData)
+      .catch((err: Error) => setError(err.message))
+  }
 
   useEffect(() => {
     breakdownApi
       .get(id)
       .then(setData)
       .catch((err: Error) => setError(err.message))
+    childrenApi
+      .list()
+      .then((list) => setChild(list.find((c) => c.id === id) ?? null))
+      .catch(() => {})
   }, [id])
+
+  const name = child ? nameOf(child) : (data?.child_name ?? 'them')
+
+  async function onBonus() {
+    const input = window.prompt(`Give ${name} a bonus. How much (${CURRENCY_LABEL})?`, '5.00')
+    if (input === null) return
+    const amount = parseMoney(input)
+    if (amount === null) return showToast('Enter an amount like 5.00', 'error')
+    try {
+      await shopApi.bonus(id, amount, 'Bonus from parent')
+      reload()
+      showToast(`Gave ${name} ${formatMoney(amount)}`)
+    } catch (err) {
+      showToast((err as Error).message, 'error')
+    }
+  }
+
+  async function onSkip() {
+    const ok = window.confirm(
+      `Skip a month for ${name}? It pays 4 weeks of allowance, closes their statement, charges interest or a ` +
+        'late fee if they have not paid, and issues a new statement. It cannot be undone.',
+    )
+    if (!ok) return
+    try {
+      const result = await creditApi.skipMonth(id)
+      reload()
+      showToast(skipMessage(result))
+    } catch (err) {
+      showToast((err as Error).message, 'error')
+    }
+  }
+
+  async function onRemove() {
+    if (!window.confirm(`Remove ${name}'s account? This deletes their account and data.`)) return
+    try {
+      await childrenApi.remove(id)
+      showToast(`${name}'s account was removed`)
+      navigate('/dashboard')
+    } catch (err) {
+      showToast((err as Error).message, 'error')
+    }
+  }
 
   async function writeRecap() {
     setWriting(true)
@@ -49,6 +113,37 @@ export function ChildBreakdownPage() {
       <section className="container-x py-10 md:py-14">
         <TextLink to="/dashboard">Back to your kids</TextLink>
 
+        <div className="mt-6 flex flex-wrap gap-3 border-y border-line py-4">
+          <Button size="sm" onClick={onBonus}>
+            Give bonus
+          </Button>
+          <Button size="sm" variant="light" className="border border-brand" onClick={onSkip}>
+            Skip a month
+          </Button>
+          <Button size="sm" variant="light" className="border border-brand" onClick={() => setEditing((e) => !e)} disabled={!child}>
+            {editing ? 'Close settings' : 'Edit settings'}
+          </Button>
+          <Button size="sm" variant="light" className="border border-brand" onClick={onRemove}>
+            Remove
+          </Button>
+        </div>
+
+        {editing && child && (
+          <div className="mt-6 border border-line p-6">
+            <ChildForm
+              mode="edit"
+              child={child}
+              onCancel={() => setEditing(false)}
+              onSubmit={async (input) => {
+                setChild(await childrenApi.update(child.id, input))
+                setEditing(false)
+                reload()
+                showToast(input.password ? 'Saved. The new password works now.' : 'Saved')
+              }}
+            />
+          </div>
+        )}
+
         {error && (
           <div className="mt-6">
             <FormError message={error} />
@@ -63,7 +158,10 @@ export function ChildBreakdownPage() {
 
         {data && (
           <>
-            <Stats d={data} />
+            <div className="mt-8 grid gap-6 md:grid-cols-[240px_minmax(0,1fr)] md:items-center">
+              <CardImage cardId={data.summary.card.id} name={data.summary.card.name} className="max-w-[300px]" />
+              <Stats d={data} />
+            </div>
             <RecapSection recap={data.recap} writing={writing} onWrite={writeRecap} />
             <Money d={data} />
             <ScoreBlock d={data} />
@@ -98,7 +196,7 @@ function Stats({ d }: { d: Breakdown }) {
     },
   ]
   return (
-    <dl className="mt-8 grid grid-cols-2 gap-px border border-line bg-line md:grid-cols-4">
+    <dl className="grid grid-cols-2 gap-px border border-line bg-line md:grid-cols-4">
       {stats.map((st) => (
         <div key={st.label} className="bg-paper px-4 py-3">
           <dt className="meta">{st.label}</dt>

@@ -227,6 +227,8 @@ def give_bonus(data: BonusCreate, parent: CurrentParent, session: SessionDep) ->
 
 # ---- purchase requests -------------------------------------------------------
 
+SELF_SERVE_KINDS = ("in_game", "led_skin")  # bought without asking a parent
+
 @router.post("/requests", response_model=PurchaseRequestPublic, status_code=status.HTTP_201_CREATED)
 def request_purchase(data: PurchaseRequestCreate, user: CurrentUser, session: SessionDep) -> PurchaseRequestPublic:
     child = _require_child(user)
@@ -259,10 +261,17 @@ def request_purchase(data: PurchaseRequestCreate, user: CurrentUser, session: Se
         raise HTTPException(status.HTTP_400_BAD_REQUEST, reason)
 
     req = PurchaseRequest(child_id=child.id, reward_id=reward.id, title=reward.title, price=price, kind=reward.kind)
+    if reward.kind in SELF_SERVE_KINDS:
+        # In-game items (decor, LED skins) need no parent: straight to the card tap.
+        req.status = "approved"
+        req.decided_at = utcnow()
     session.add(req)
     session.commit()
     session.refresh(req)
-    notify(child.parent_id, f"{_name(child)} wants {req.title}", f"{money(req.price)}. Open Whack to approve or say no.")
+    if req.status == "pending":
+        notify(
+            child.parent_id, f"{_name(child)} wants {req.title}", f"{money(req.price)}. Open Teenacredit to approve or say no."
+        )
     return _public(session, req)
 
 

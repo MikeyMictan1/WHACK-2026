@@ -79,9 +79,9 @@ export function Bar({ value, max, label }: { value: number; max: number; label: 
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={value}
-      className="h-3 border border-ink"
+      className="h-3 border border-brand"
     >
-      <div className="h-full bg-ink" style={{ width: `${percent}%` }} />
+      <div className="h-full bg-brand" style={{ width: `${percent}%` }} />
     </div>
   )
 }

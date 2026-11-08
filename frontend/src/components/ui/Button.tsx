@@ -2,9 +2,9 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { Link, type LinkProps } from 'react-router'
 
 /**
- * solid     ink block; hover swaps to lime with ink text.
- * light     white block for use over the backdrop; hover swaps to ink.
- * onAccent  for use on a lime surface; hover swaps to white.
+ * solid     blue block; hover swaps to red.
+ * light     white block (give it a border on white); hover swaps to blue.
+ * onAccent  white block for use on a blue band; hover swaps to red.
  * Hover changes colour outright. Nothing fades, nothing moves.
  */
 type Variant = 'solid' | 'light' | 'onAccent'
@@ -19,9 +19,9 @@ const sizes: Record<Size, string> = {
 }
 
 const variants: Record<Variant, string> = {
-  solid: 'bg-ink text-white hover:bg-signal hover:text-ink active:bg-ink-2 active:text-white',
-  light: 'bg-white text-ink hover:bg-ink hover:text-white',
-  onAccent: 'bg-ink text-white hover:bg-white hover:text-ink',
+  solid: 'bg-brand text-white hover:bg-signal active:bg-signal-2',
+  light: 'bg-white text-ink hover:bg-brand hover:text-white',
+  onAccent: 'bg-white text-brand hover:bg-signal hover:text-white',
 }
 
 type Common = { variant?: Variant; size?: Size; children: ReactNode }

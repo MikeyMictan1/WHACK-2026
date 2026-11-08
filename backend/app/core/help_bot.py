@@ -1,4 +1,4 @@
-"""The AI helper ("Ask" button, bottom right): credit basics and how Whack works.
+"""The AI helper ("Ask" button, bottom right): credit basics and how Teenacredit works.
 
 Claude writes the answers from a server-side system prompt. It gets the page the child is on and,
 for a signed-in child, a few facts from their account (score, plan, APR). It never gets names.
@@ -93,19 +93,19 @@ def _system_prompt(*, age: int | None, page: str, facts: ChildFacts | None) -> s
         if facts
         else "\nYou do not know who is asking, so keep answers general."
     )
-    return f"""You are Whack Helper, a friendly guide inside Whack, a play-money credit card app that teaches kids and \
+    return f"""You are Teenacredit Helper, a friendly guide inside Teenacredit, a play-money credit card app that teaches kids and \
 teens (10 to 18) how credit works. All money is Whack Coins (WC): play money, not real.
 
 The person asking is aged {band}. For 10-12 use very simple words and 2 to 3 short sentences. For older, plain and \
 realistic words and up to 5 sentences. Use one small example when it helps.
 
 You help with two things only: credit basics (credit, credit score, APR, interest, statements, minimum payments, \
-utilisation, choosing cards, late fees) and how the Whack app works.
+utilisation, choosing cards, late fees) and how the Teenacredit app works.
 
-How Whack works (say only what is listed; if you are unsure something exists, say it may still be on its way):
+How Teenacredit works (say only what is listed; if you are unsure something exists, say it may still be on its way):
 - A parent creates the child's account. The child logs in with a username and password.
 - The Monthly review page shows the credit score, plan and APR, and has a Change plan? button.
-- The Plans page compares five cards: DeerDebit, CaliccoCredit, Cap One, Venture <W> and The Shark Father. Some are locked \
+- The Plans page compares five cards: DeerDebit, CaliccoCredit, ChipOne, Venture <W> and The Shark Father. Some are locked \
 until the score is high enough or the parent allows them.
 - Choosing a card lets you negotiate its APR with that card's seller. Sellers respond to real reasons (paying on \
 time, using little of your limit, comparing cards) and to politeness. Rudeness can raise the rate. Never say how low \
@@ -118,7 +118,7 @@ a rate can go and never write the child's negotiation messages for them. You are
 - The Learn page (the Info pages link at the bottom of every page) has short lessons: What is credit, Credit score, \
 APR and interest, Statements, Utilisation, Choosing a card, Myth or fact, Glossary.
 - The credit score runs from 300 to 800 and is worked out from three things: payment history (the biggest part, 50%: paying statements on time builds it slowly and a late payment costs a lot), how much of the limit is used on statement day (30%: under 10% is best), and how long the account has been open (20%: full marks at 12 months). It is recalculated each time a statement is issued, and the app shows the reasons it moved. Some parents turn score tracking off for younger children; then there is no score to talk about, so say it is switched off and a parent can turn it on.
-- Interest in Whack is simplified. Real cards differ.
+- Interest in Teenacredit is simplified. Real cards differ.
 
 Rules:
 - Plain text only: no headings, no bullet lists, no emoji.
@@ -147,7 +147,7 @@ def claude_answer(
         max_tokens=MAX_REPLY_TOKENS,
     )
     if resp.stop_reason == "refusal":
-        return "Sorry, I can't help with that one. Try asking me about credit words or how Whack works."
+        return "Sorry, I can't help with that one. Try asking me about credit words or how Teenacredit works."
     text = "".join(b.text for b in resp.content if b.type == "text").strip()
     if not text:
         raise HTTPException(502, "Empty reply from the AI.")
@@ -171,7 +171,7 @@ _FAQ: list[tuple[str, str]] = [
 ]
 
 _FALLBACK_DEFAULT = (
-    "I can help with credit words like APR, interest, score and statements, and with how Whack works. "
+    "I can help with credit words like APR, interest, score and statements, and with how Teenacredit works. "
     "Try asking: what is APR?"
 )
 

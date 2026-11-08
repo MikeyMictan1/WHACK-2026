@@ -4,15 +4,15 @@ export type RewardKind = 'in_game' | 'weekly' | 'milestone' | 'led_skin'
 export type ChoreKind = 'chore' | 'extracurricular'
 
 export const REWARD_KINDS: { kind: RewardKind; label: string; note: string }[] = [
-  { kind: 'led_skin', label: 'LED skins', note: 'New looks for your LED screen. Equip them in LED Home' },
-  { kind: 'in_game', label: 'In-game', note: 'Themes, icons and decor' },
+  { kind: 'led_skin', label: 'LED skins', note: 'New looks for your LED display. No parent approval needed' },
+  { kind: 'in_game', label: 'Dashboard decor', note: 'Things for your dashboard. No parent approval needed' },
   { kind: 'weekly', label: 'Weekly', note: 'Small treats, a few times a week at most' },
   { kind: 'milestone', label: 'Milestones', note: 'Big goals to save up for' },
 ]
 
 export const CHORE_KINDS: { kind: ChoreKind; label: string }[] = [
-  { kind: 'chore', label: 'Chores' },
-  { kind: 'extracurricular', label: 'Extracurricular' },
+  { kind: 'chore', label: 'Chores at home' },
+  { kind: 'extracurricular', label: 'Clubs and goals' },
 ]
 
 export type Reward = {

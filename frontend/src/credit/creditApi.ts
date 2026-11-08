@@ -80,6 +80,7 @@ export type PayResult = { summary: CreditSummary; paid: number; cash_back: numbe
 export type ChildCredit = {
   child_id: number
   child_name: string
+  card_id: string
   card_name: string
   has_credit: boolean
   owed: number

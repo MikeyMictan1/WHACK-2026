@@ -107,7 +107,7 @@ The backend computes all numbers. Claude only explains them.
 **Cards** (placeholder names, change before the pitch):
 1. DeerDebit (youngest kids, no credit)
 2. CaliccoCredit (starter credit card)
-3. Cap One (mid tier)
+3. ChipOne (mid tier)
 4. Venture <W> (best rewards, needs a high score)
 5. The Shark Father (instant approval, awful APR; the teaching villain)
 
@@ -121,7 +121,7 @@ The backend computes all numbers. Claude only explains them.
 | Credit used | up to 150 (30%) | Statement total divided by the limit: full marks at 10% or less, then falling in straight lines through 30% (105), 50% (60) to 0 at 100%. |
 | Length of history | up to 100 (20%) | 100 over the first 12 months open. |
 
-- A new account starts at 580 (Fair). Cap One needs 600 and Venture <W> 720, so good habits unlock cards.
+- A new account starts at 580 (Fair). ChipOne needs 600 and Venture <W> 720, so good habits unlock cards.
 - It is recalculated once a month, when a statement is issued ("Skip a month"). Every change is saved with its reason (`ScoreEvent`), for example "+14 Statement 1 paid in full on time" or "-34 You used 25% of your limit".
 - Debit has no credit to measure, so only a statement paid on time counts there; usage and history are left alone.
 - The backend always tracks it. A parent decides whether the child sees it (the age preset or the Custom "credit score" option); when it is off the child sees an explanation, the AI never names a number, and locked cards say "needs a stronger credit record".
@@ -139,7 +139,7 @@ build against. All values are starting points; tune them after a playtest.
 |---|---|---|---|---|---|
 | DeerDebit | none (own balance) | none | none | none | Default for the youngest kids. Can't go below £0. |
 | CaliccoCredit | 1x | 20% | none | none | Starter credit card every child can get. |
-| Cap One | 1.5x | 15% | 600+ | 1% back | Mid tier, unlocked by a decent score. |
+| ChipOne | 1.5x | 15% | 600+ | 1% back | Mid tier, unlocked by a decent score. |
 | Venture <W> | 3x | 10% | 720+ | 3% back | Best card. Rewards paid as play money. |
 | The Shark Father | 10x | 90% | none, instant | none | £5 late fee. Looks easy, costs the most. The villain. |
 

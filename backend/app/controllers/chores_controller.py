@@ -100,7 +100,7 @@ def claim_chore(chore_id: int, user: CurrentUser, session: SessionDep) -> ChoreC
     notify(
         user.parent_id,
         f"{user.display_name or user.username} did: {chore.title}",
-        f"Open Whack to approve and pay {money(chore.amount)}.",
+        f"Open Teenacredit to approve and pay {money(chore.amount)}.",
     )
     return _claim_public(session, claim)
 

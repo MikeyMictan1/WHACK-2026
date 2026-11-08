@@ -1,4 +1,4 @@
-# Whack (hackathon template)
+# Teenacredit (built on the Whack hackathon template)
 
 React + Tailwind frontend, FastAPI + SQLModel (SQLite) backend in MVC, cookie-based JWT auth,
 a Claude-powered AI page, and two hardware integrations: an NFC card reader and a 16x16 LED
@@ -58,8 +58,10 @@ frontend/src/
   learn/             /learn info pages: expandable lessons with small demos; text lives in learn/content.ts
   help/              the Ask button (bottom right, every page except the negotiation chat) and its chat panel
   milestones/        /milestones: the child's goals (from the child form) as boxes with progress; redeem from balance
-  front-page/  ai-feature/  profile/  vault/  nfc/  legal/  not-found/
-  assets/            backdrop/, carousel/, mascot/ images (numbered PNGs, see each README)
+  card/              /card: the child's card picture and terms; cardArt.ts maps card id -> assets/cards/*.png
+  front-page/  profile/  vault/  nfc/  legal/  not-found/
+  assets/            brand/ (logos), cards/ (one per card id), decor/ (in-game items), sellers/ (portraits),
+                     carousel/, mascot/. Sources are in teenacredit-assets/ at the repo root
 hardware/unicorn/    whack_grid.py, MicroPython that runs on the LED board
 ```
 
@@ -80,8 +82,10 @@ Frontend:
 2. Register the route in `app/App.tsx` (wrap in `<RequireAuth>` if it needs login).
 3. Optionally add it to `NAV_LINKS` in `components/layout/navigation.ts`.
 
-The template's feature-1 and feature-2 are gone: the nav is Shop (`/shop`), LED Home (`/led`) and
-AI. The old paths redirect.
+The nav depends on the role (`navLinks(role)` in `navigation.ts`): children get Dashboard, Shop, Earn,
+LED Display (`/led`) and Credit card (`/card`); parents and admin only Dashboard; logged out, Home and
+How credit works. The dashboard is home once logged in (`/` redirects there). The old AI page is gone
+(`/ai` redirects to the dashboard); the backend `ai_controller` is unused by the UI.
 
 ## Gotchas
 
@@ -153,6 +157,11 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
 - A child on a credit card spends on the card: `shop_controller.pay` calls `charge_purchase` instead of taking
   money from the ledger, and declines over the limit. On Debit it still takes the child's own balance.
   The purchase is claimed first with `set_status_if` (race-safe), then charged in the same transaction.
+- In-game items (`in_game` decor and `led_skin`) need no parent: `request_purchase` creates them already
+  `approved` (`SELF_SERVE_KINDS`), so the child goes straight to the card tap. Weekly and milestone items still
+  wait for the parent. The example decor (Potted plant, Arcade machine, Calico cat, Trading screens) has art,
+  matched by title in `decor/decorArt.ts`; `shop.upgrade_starter_decor` renames a family's old example items.
+- The LED Display page only equips skins the child owns; skins are bought in the shop (with live previews).
 - Statement payments (`POST /api/credit/payments`) take a tap like purchases: reader or laptop bridge
   (`wait_for_card_tap`), a phone tap (`card_uid`), or `simulate`.
 - `CreditProfile.balance` (what is owed) changes only through `credit.post_entry`, together with a
@@ -163,7 +172,7 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
   passes, interest and any late fee, a new `Statement`. Statements are due 14 days after they are issued.
   This is separate from the admin's site clock (`models/clock.py`, `site_now()`), which the shop uses.
 - The seeded cards follow DESIGN.md 6.1 (`models/card.py`). Credit limits are not fixed amounts: each card has a
-  `limit_multiplier_pct` of the child's weekly allowance (CaliccoCredit 1x, Cap One 1.5x, Venture <W> 3x, The Shark Father 10x, at
+  `limit_multiplier_pct` of the child's weekly allowance (CaliccoCredit 1x, ChipOne 1.5x, Venture <W> 3x, The Shark Father 10x, at
   least 1.00 WC; no allowance counts as 10.00 WC a week, as for shop prices). `get_profile` copies the allowance onto `CreditProfile.weekly_allowance` and keeps
   `credit_limit` in step. For a card the child isn't on, use `card_limit_for(session, card, user_id)` or
   `limit_for(card, profile.weekly_allowance)`, never `card.credit_limit` (an unused leftover column, like
@@ -216,6 +225,9 @@ Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plan
   what they owe, their clock, their score and its three parts; created on first use through `get_profile`, which
   also sets up the score for older accounts).
 - If Claude is unreachable the scripted bot in `seller_bot.py` takes over so the demo still runs.
+- The negotiation page shows the seller at the top (`negotiation/SellerPortrait.tsx`, pixel art in
+  `assets/sellers/`): Linguini has his own frames, every other seller uses the woman with the cat. The face
+  follows the recorded offers (`mood.ts`): rate down = happy, up = angry, same = neutral.
 - Each seller has a character: `PERSONAS` (Mia, Simon Smith, Priya, Linguini the Godfather-style loan shark),
   `OPENERS` and the offline `SCRIPTS` in `core/seller_bot.py`, keyed by card id. A new negotiable card needs an
   entry in all three. Characters change wording only; the floor, the card's rude penalty and each card's maximum
@@ -292,11 +304,14 @@ To add a skin: write `render(t, ctx, state) -> 256 colours` and add it to `SKINS
 
 The look is deliberate; keep new UI consistent with it.
 
+- Brand: card blue (`bg-brand`, `bg-brand-2`), white, and red as the one highlight (`bg-signal`, still
+  named signal; a red surface gets white text automatically). The white nav bar carries the blue logo;
+  `PageHeader` is a solid blue band; the footer is dark blue. No blur backdrop any more.
 - Tokens live in `src/styles/index.css` `@theme`. Use them (`text-ink`, `text-muted`, `bg-paper`,
-  `bg-sky`, `border-line`, `bg-signal`, `text-d1`..`text-d4`, `text-lead`) instead of raw hex or
-  default Tailwind colours. Utilities: `container-x` (page gutter), `grid-12`, `meta` (small label).
+  `bg-sky`, `border-line`, `bg-brand`, `bg-signal`, `text-d1`..`text-d4`, `text-lead`) instead of raw
+  hex or default Tailwind colours. Utilities: `container-x` (page gutter), `grid-12`, `meta`, `pixelated`.
 - One typeface (Outfit). Square corners, no shadows, no glass/blur cards. Surfaces are solid and
-  separated by 1px rules. Acid lime `signal` is the only highlight colour, used sparingly.
+  separated by 1px rules.
 - Pages start with `<PageHeader marker="0N" title description />`, content in
   `<section className="container-x py-10 md:py-14">`.
 - Use `Button`, `TextField`, `FormError`, `Skeleton` (loading states, never a blank screen) and

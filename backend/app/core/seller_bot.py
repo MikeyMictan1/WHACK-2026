@@ -110,7 +110,7 @@ def age_band(age: int | None) -> str:
 
 
 def seller_name(card: Card) -> str:
-    """'Simon Smith from Cap One' -> 'Simon Smith'."""
+    """'Simon Smith from ChipOne' -> 'Simon Smith'."""
     return card.seller.split(" from ")[0]
 
 

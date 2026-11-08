@@ -31,7 +31,7 @@ export function PushToggle({ what }: { what: string }) {
   if (state === null || state === 'unsupported') return null
 
   const text = {
-    'needs-install': 'On iPhone: tap Share, then Add to Home Screen, open Whack from there and turn notifications on.',
+    'needs-install': 'On iPhone: tap Share, then Add to Home Screen, open Teenacredit from there and turn notifications on.',
     blocked: 'Notifications are blocked for this site. Allow them in the browser settings to get alerts.',
     off: `Get a notification on this device ${what}.`,
     on: `On for this device. You’ll get a notification ${what}.`,

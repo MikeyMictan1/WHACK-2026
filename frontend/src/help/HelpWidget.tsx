@@ -76,7 +76,7 @@ export function HelpWidget() {
         type="button"
         aria-expanded={false}
         onClick={() => setOpen(true)}
-        className="fixed right-4 bottom-4 z-[100] h-12 bg-ink px-6 text-[15px] font-medium text-white hover:bg-signal hover:text-ink md:right-8 md:bottom-8"
+        className="fixed right-4 bottom-4 z-[100] h-12 bg-signal px-6 text-[15px] font-medium text-white hover:bg-brand md:right-8 md:bottom-8"
       >
         Ask
       </button>
@@ -86,21 +86,21 @@ export function HelpWidget() {
   return (
     <section
       role="dialog"
-      aria-label="Ask Whack"
+      aria-label="Ask Teenacredit"
       onKeyDown={(e) => {
         if (e.key === 'Escape') setOpen(false)
       }}
       className="fixed right-4 bottom-4 z-[100] flex h-[min(36rem,calc(100svh-2rem))] w-[min(24rem,calc(100vw-2rem))] flex-col border border-ink bg-white md:right-8 md:bottom-8"
     >
       <header className="flex items-center justify-between bg-ink px-5 py-4 text-white">
-        <h2 className="font-medium">Ask Whack</h2>
+        <h2 className="font-medium">Ask Teenacredit</h2>
         <button type="button" onClick={() => setOpen(false)} className="text-sm font-medium underline-offset-4 hover:underline">
           Close
         </button>
       </header>
 
       <div className="flex-1 overflow-y-auto p-5" aria-live="polite">
-        <p className="text-[15px] leading-relaxed">Got a question about credit or how Whack works? Ask me here.</p>
+        <p className="text-[15px] leading-relaxed">Got a question about credit or how Teenacredit works? Ask me here.</p>
 
         {messages.length === 0 && (
           <ul className="mt-4 flex flex-col items-start gap-2">
@@ -121,7 +121,7 @@ export function HelpWidget() {
         <ol className="mt-4 flex flex-col gap-4">
           {messages.map((m) => (
             <li key={m.id} className={m.role === 'user' ? 'self-end' : 'self-start'}>
-              <p className="meta mb-1">{m.role === 'user' ? 'You' : 'Whack'}</p>
+              <p className="meta mb-1">{m.role === 'user' ? 'You' : 'Teenacredit'}</p>
               <p
                 className={`px-4 py-3 text-[15px] leading-relaxed whitespace-pre-wrap ${
                   m.role === 'user' ? 'bg-sky' : 'border border-line'
@@ -150,8 +150,8 @@ export function HelpWidget() {
             </li>
           ))}
           {sending && (
-            <li className="self-start" aria-label="Whack is typing">
-              <p className="meta mb-1">Whack</p>
+            <li className="self-start" aria-label="Teenacredit is typing">
+              <p className="meta mb-1">Teenacredit</p>
               <div className="flex w-56 flex-col gap-2 border border-line px-4 py-3">
                 <Skeleton className="h-3 w-full" />
                 <Skeleton className="h-3 w-2/3" />

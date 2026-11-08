@@ -1,25 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/useAuth.ts'
 import { PageHeader } from '../components/layout/PageHeader.tsx'
-import { Button, TextLink } from '../components/ui/Button.tsx'
+import { Button, ButtonLink } from '../components/ui/Button.tsx'
 import { Skeleton } from '../components/ui/Skeleton.tsx'
 import { showToast } from '../components/ui/toast.ts'
-import { formatMoney } from '../lib/money.ts'
-import { PurchaseFlow } from '../shop/PurchaseFlow.tsx'
-import { shopApi, type PurchaseRequest } from '../shop/shopApi.ts'
 import { LedGrid } from './LedGrid.tsx'
 import { ledApi, type LedState, type WardrobeSkin } from './ledApi.ts'
 
 const STATE_POLL_MS = 200
 const WARDROBE_POLL_MS = 500
 
-/** LED Home: what the Unicorn shows right now, and a wardrobe of skins to equip or buy. */
+/** LED Display: what the Unicorn shows right now, and the skins you own to pick from. Buying happens in the shop. */
 export function LedHomePage() {
   const { user } = useAuth()
   const [state, setState] = useState<LedState | null>(null)
   const [skins, setSkins] = useState<WardrobeSkin[] | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
-  const [buying, setBuying] = useState<PurchaseRequest | null>(null)
 
   // Live display + wardrobe previews. Paused while the tab is hidden.
   useEffect(() => {
@@ -48,26 +44,14 @@ export function LedHomePage() {
     }
   }
 
-  async function buy(skin: WardrobeSkin) {
-    if (skin.reward_id === null) return showToast('This skin isn’t in your shop. Ask your parent.', 'error')
-    setBusy(skin.key)
-    try {
-      setBuying(await shopApi.buy(skin.reward_id))
-    } catch (err) {
-      showToast((err as Error).message, 'error')
-    } finally {
-      setBusy(null)
-    }
-  }
-
   const board = state?.board
 
   return (
     <>
       <PageHeader
-        marker="LED Home"
-        title="LED Home."
-        description="What your LED screen is showing right now. Pick a skin from your wardrobe and it changes here and on the board."
+        marker="LED Display"
+        title="LED Display."
+        description="What your LED display is showing right now. Pick one of your skins and it changes here and on the board."
       />
 
       <section className="container-x py-10 md:py-14">
@@ -88,7 +72,7 @@ export function LedHomePage() {
                 <span className="text-muted">Checking the board…</span>
               ) : board.connected ? (
                 <p>
-                  <span aria-hidden className="mr-2 inline-block size-2 bg-signal align-middle" />
+                  <span aria-hidden className="mr-2 inline-block size-2 bg-brand align-middle" />
                   Unicorn connected{board.port ? ` on ${board.port}` : ''}.
                   {!board.fast && (
                     <span className="mt-2 block text-muted">
@@ -108,8 +92,12 @@ export function LedHomePage() {
         </div>
 
         <div className="mt-16 flex flex-wrap items-end justify-between gap-4 border-b border-ink pb-4">
-          <h2 className="text-d3 font-light">Wardrobe</h2>
-          {user?.role === 'child' && <TextLink to="/shop">More in the shop</TextLink>}
+          <h2 className="text-d3 font-light">Your skins</h2>
+          {user?.role === 'child' && (
+            <ButtonLink to="/shop" size="sm" variant="light" className="border border-brand">
+              Get more in the shop
+            </ButtonLink>
+          )}
         </div>
 
         {!skins && (
@@ -122,32 +110,22 @@ export function LedHomePage() {
 
         {skins && (
           <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {skins.map((s) => (
+            {skins
+              .filter((s) => s.owned)
+              .map((s) => (
               <li
                 key={s.key}
-                className={`flex flex-col border bg-white p-3 ${s.showing ? 'border-ink' : 'border-ink/15'}`}
+                className={`flex flex-col border bg-white p-3 ${s.showing ? 'border-signal' : 'border-line'}`}
               >
-                <div className={s.owned ? '' : 'opacity-60'}>
-                  <LedGrid frame={s.preview} small label={`${s.name} preview`} />
-                </div>
+                <LedGrid frame={s.preview} small label={`${s.name} preview`} />
                 <h3 className="mt-3 font-medium">{s.name}</h3>
                 <p className="meta mt-1">{s.description}</p>
                 <div className="mt-auto pt-4">
                   {s.showing ? (
-                    <p className="text-sm font-medium">Showing now</p>
-                  ) : s.owned ? (
-                    <Button size="sm" className="w-full" disabled={busy !== null} onClick={() => equip(s)}>
-                      Equip
-                    </Button>
+                    <p className="flex h-10 items-center justify-center bg-signal text-sm font-medium">On the display</p>
                   ) : (
-                    <Button
-                      size="sm"
-                      variant="light"
-                      className="w-full border border-ink"
-                      disabled={busy !== null}
-                      onClick={() => buy(s)}
-                    >
-                      Buy {formatMoney(s.price)}
+                    <Button size="sm" className="w-full" disabled={busy !== null} onClick={() => equip(s)}>
+                      Show this
                     </Button>
                   )}
                 </div>
@@ -157,14 +135,6 @@ export function LedHomePage() {
         )}
       </section>
 
-      {buying && (
-        <PurchaseFlow
-          key={buying.id}
-          request={buying}
-          onClose={() => setBuying(null)}
-          onChange={() => void ledApi.wardrobe().then(setSkins).catch(() => {})}
-        />
-      )}
     </>
   )
 }

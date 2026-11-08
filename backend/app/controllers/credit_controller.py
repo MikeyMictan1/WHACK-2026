@@ -186,6 +186,7 @@ class PayOut(BaseModel):
 class ChildCredit(BaseModel):
     child_id: int
     child_name: str
+    card_id: str
     card_name: str
     has_credit: bool
     owed: int
@@ -414,6 +415,7 @@ def children_credit(parent: CurrentParent, session: SessionDep) -> list[ChildCre
             ChildCredit(
                 child_id=child.id,
                 child_name=_display_name(child),
+                card_id=profile.current_card_id,
                 card_name=card.name if card else profile.current_card_id,
                 has_credit=is_credit(profile),
                 owed=profile.balance,

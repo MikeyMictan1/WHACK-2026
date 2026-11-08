@@ -284,7 +284,7 @@ SKINS: dict[str, Skin] = {
         Skin("clock", "Clock", "The time, with the seconds running along the bottom", 0, 2, clock),
         Skin("balance", "Balance", "How much money you have right now", 0, 1, balance),
         Skin("goal", "Savings jar", "Fills up as you save for your next milestone", 0, 6, goal),
-        Skin("mascot", "Mascot", "Your Whack buddy. Smiles when you have money", 0, 6, mascot),
+        Skin("mascot", "Mascot", "Your Teenacredit buddy. Smiles when you have money", 0, 6, mascot),
         Skin("weather", "Weather", "Temperature and sky right now", 150, 4, weather),
         Skin("date", "Date", "Day and month, today lit up along the bottom", 50, 1, date),
         Skin("heartbeat", "Heartbeat", "A pulsing heart", 100, 12, heartbeat),
