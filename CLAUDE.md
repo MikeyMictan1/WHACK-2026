@@ -18,7 +18,8 @@ The user is on Windows. Project scripts are bash and run from Git Bash at the re
 - Vite proxies `/api/*` to the backend, so the frontend always calls relative `/api/...` paths
 - Preview configs for the browser pane are in `.claude/launch.json` (`frontend`, `backend`, `dev`)
 
-How the scripts work and how to troubleshoot them: [RUNBOOK.md](RUNBOOK.md).
+Setup, running, demo accounts, settings, hardware, phones, deploying (Railway), the laptop bridge
+and troubleshooting: [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 `fastapi dev` hot-reloads the backend and Vite hot-reloads the frontend, so after editing code
 there's no need to restart. Restart only after changing `backend/.env` or installing packages.
@@ -149,16 +150,39 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
   passes, interest and any late fee, a new `Statement`. Statements are due 14 days after they are issued.
   This is separate from the admin's site clock (`models/clock.py`, `site_now()`), which the shop uses.
 - The seeded cards follow DESIGN.md 6.1 (`models/card.py`). Credit limits are not fixed amounts: each card has a
-  `limit_multiplier_pct` of the child's weekly allowance (Basic 1x, Chip 1.5x, Venture W 3x, Loan Shark 10x, at
+  `limit_multiplier_pct` of the child's weekly allowance (Calicco Credit 1x, Chip 1.5x, Venture W 3x, Loan Shark 10x, at
   least 1.00 WC). `get_profile` copies the allowance onto `CreditProfile.weekly_allowance` and keeps
-  `credit_limit` in step; use `limit_for(card, profile.weekly_allowance)` for a card the child isn't on.
-  `Card.credit_limit` is an unused leftover column.
+  `credit_limit` in step. For a card the child isn't on, use `card_limit_for(session, card, user_id)` or
+  `limit_for(card, profile.weekly_allowance)`, never `card.credit_limit` (an unused leftover column, like
+  `User.starting_credit_limit`). The starter card is Calicco Credit (`STARTER_CARD_ID = "calicco_credit"`); it was
+  Whack Basic (`whack_basic`), and `list_cards` moves old data to the new id once.
 - The credit score (`models/score.py`) is 300 + payment history (250) + credit used (150) + history (100). It is
   recalculated only in `advance_month`, and every change is saved as a `ScoreEvent` with its reason. It is always
   tracked, but only shown where the parent turned it on (`score_enabled`, mirroring the form's presets); the API
   returns `score: null` otherwise, the AI helper and the sellers are told not to name a number, and locked-card
   messages use neutral wording. Change the maths and `score_rules_test`-style checks need new numbers.
 - A child can change plan once a month (`switch_locked_reason`); Plans and the negotiation both check it.
+
+## Parent dashboard: kids list, breakdown
+
+- `GET /api/breakdown/{child_id}` (parent, own children only) and `POST .../recap` (20 s cooldown) in
+  `breakdown_controller`; numbers from `models/breakdown.py`. The parent sees the score even if the child's tracking is off.
+- `core/recap_bot.py`: the facts sheet is built in code, Claude only writes JSON sentences from it, any number not in the
+  facts is rejected (one retry), then `template_recap`. Never send the child's name. Saved in `Recap` (deleted with the child).
+
+## Child home: decor and spending chart
+
+- Decor = any in-game reward the child has paid for (`models/decor.owned_decor`). `DecorPlacement` stores side and slot;
+  `PUT /api/decor` saves the whole layout (owned only, once each, 4 per side). `GET /api/decor/spending` feeds the Home chart
+  (reuses `models/breakdown.spending_breakdown`). Frontend: `decor/` (page, panel, tile); no art exists, tiles show the item's initial.
+
+## Monthly wrap (child's AI summary)
+
+- `GET /api/story` (`story_controller`, `core/story_bot.py`) writes the story for the child's latest statement on first ask and
+  saves it as `MonthlyStory` (one per statement number and status, so paying earns a fresh one). `POST /api/story/retry` swaps a
+  built-in story for an AI one. Same rules as the parent recap: facts built in code, unknown numbers rejected, scripted fallback,
+  no names. If the child's score tracking is off the facts omit the score and any draft mentioning "score" is rejected.
+  Shown by `monthly/StorySection.tsx` at the top of `/review`.
 
 ## Change plan and negotiation
 

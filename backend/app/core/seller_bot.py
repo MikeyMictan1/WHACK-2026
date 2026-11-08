@@ -26,7 +26,7 @@ MAX_TOOL_ROUNDS = 3
 MAX_REPLY_TOKENS = 500
 
 PERSONAS = {
-    "whack_basic": (
+    "calicco_credit": (
         "MIA, the cheerleader. A warm, upbeat coach who is genuinely thrilled the child is starting out. You celebrate "
         "small wins and talk in 'we', like a friendly older sibling. Praise first, then the ask. Short, bright sentences. "
         "When the child is vague, give a friendly hint about what would help (months paid on time, how little of the limit "
@@ -64,7 +64,7 @@ PERSONAS = {
 
 # What each seller says first. {name} is the seller's first name; the rest come from the card.
 OPENERS = {
-    "whack_basic": "Hi, I'm {name}! First card? Welcome. {card} starts at {apr} APR with a {limit} limit. Give me one real reason and I'll go to bat for you.",
+    "calicco_credit": "Hi, I'm {name}! First card? Welcome. {card} starts at {apr} APR with a {limit} limit. Give me one real reason and I'll go to bat for you.",
     "chip": "{name}. {card} starts at {apr} APR with a {limit} limit. Show me why you deserve better.",
     "venture_w": "Welcome. I'm {name}. {card} starts at {apr} APR with a {limit} limit, and it is for people who plan ahead. Tell me about your habits.",
     "loan_shark": "Ah, welcome, my friend. Sit. They call me {name}. {card} can be yours tonight, no fuss: {apr} APR, a {limit} limit. A small thing between friends.",
@@ -114,18 +114,20 @@ def seller_name(card: Card) -> str:
     return card.seller.split(" from ")[0]
 
 
-def opening_message(card: Card, profile: CreditProfile) -> str:
+def opening_message(card: Card, limit: int) -> str:
     template = OPENERS.get(
         card.id,
         "Hi, I'm {name}. {card} starts at {apr} APR with a {limit} limit. Tell me why you deserve a better rate, "
         "or ask me anything about the card.",
     )
-    return template.format(name=seller_name(card), card=card.name, apr=pct(card.listed_apr_bp), limit=money(limit_for(card, profile.weekly_allowance)))
+    return template.format(name=seller_name(card), card=card.name, apr=pct(card.listed_apr_bp), limit=money(limit))
 
 
 # ---- Claude bot ------------------------------------------------------------------
 
-def _system_prompt(profile: CreditProfile, card: Card, best_bp: int, turns_left: int, show_score: bool = True) -> str:
+def _system_prompt(
+    profile: CreditProfile, card: Card, best_bp: int, turns_left: int, show_score: bool = True, limit: int | None = None
+) -> str:
     utilisation = round(100 * profile.balance / profile.credit_limit) if profile.credit_limit else 0
     rise = f"{card.penalty_step_bp / 100:g} percentage points"  # how far rudeness moves this card's rate
     score_line = (
@@ -139,7 +141,7 @@ kids practise negotiating. All money is pretend. Stay in character: {PERSONAS.ge
 The child is aged {{BAND}}. Use that to set your words: 10-12 very simple and short; 13-15 plain and friendly; 16-18 \
 realistic, correct terms, treat them like a young adult.
 
-Card terms: listed APR {pct(card.listed_apr_bp)}, limit {money(limit_for(card, profile.weekly_allowance))} (this child's limit: it scales with their weekly allowance), rewards {pct(card.rewards_bp)} cash back, \
+Card terms: listed APR {pct(card.listed_apr_bp)}, limit {money(limit_for(card, profile.weekly_allowance) if limit is None else limit)}, rewards {pct(card.rewards_bp)} cash back, \
 late fee {money(card.late_fee)}.
 About the child: {score_line}{profile.on_time_streak} months paid on time in a row, \
 using {utilisation}% of their limit, account open {profile.months_open} months, currently on a card at \
@@ -187,9 +189,10 @@ def claude_reply(
     seen_offers_bp: set[int],
     record: Record,
     show_score: bool = True,
+    limit: int | None = None,
 ) -> BotReply:
     """Raises HTTPException if the Claude API is unavailable; the caller falls back to the script."""
-    system = _system_prompt(profile, card, best_bp, turns_left, show_score).replace("{BAND}", age_band(age))
+    system = _system_prompt(profile, card, best_bp, turns_left, show_score, limit).replace("{BAND}", age_band(age))
     messages: list[dict] = [
         {"role": "user" if role == "child" else "assistant", "content": text} for role, text in history
     ]
@@ -268,7 +271,7 @@ REASONS: list[tuple[str, tuple[str, ...]]] = [
 
 # Each seller's offline lines. {apr} is filled in; {praise} is the line for the reason the child gave.
 SCRIPTS: dict[str, dict] = {
-    "whack_basic": {
+    "calicco_credit": {
         "praise": {
             "history": "You have paid on time, month after month. Go you!",
             "compare": "Shopping around? Smart!",

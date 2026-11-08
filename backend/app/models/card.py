@@ -6,15 +6,20 @@ The card numbers follow docs/DESIGN.md section 6.1. The names are placeholders a
 
 from datetime import UTC, datetime
 
+from sqlalchemy import text
 from sqlmodel import Field, Session, SQLModel, select
 
 from app.models.score import init_score, utilisation_bp_of
+from app.models.user import User
+
+STARTER_CARD_ID = "calicco_credit"
+OLD_STARTER_CARD_ID = "whack_basic"  # its id before it was renamed; list_cards moves old data across
 
 # ---- Tables ----------------------------------------------------------------
 
 
 class Card(SQLModel, table=True):
-    id: str = Field(primary_key=True)  # slug, e.g. "whack_basic"
+    id: str = Field(primary_key=True)  # slug, e.g. "calicco_credit"
     name: str
     tier: int  # 0 = debit ... 4 = loan shark (display order)
     pitch: str
@@ -32,7 +37,7 @@ class Card(SQLModel, table=True):
     penalty_step_bp: int = 100
     max_penalty_bp: int = 300
     negotiable: bool = True
-    seller: str  # who the child talks to, e.g. "Mia from Whack Basic"
+    seller: str  # who the child talks to, e.g. "Mia from Calicco Credit"
 
 
 class CreditProfile(SQLModel, table=True):
@@ -48,7 +53,7 @@ class CreditProfile(SQLModel, table=True):
     score_payment: int = -1  # payment history points, 0 to 250. -1 = the score is not set up yet
     score_utilisation: int = 0  # credit used points, 0 to 150
     score_history: int = 0  # length of history points, 0 to 100
-    current_card_id: str = "whack_basic"
+    current_card_id: str = STARTER_CARD_ID
     current_apr_bp: int = 2000  # the APR this child actually pays (a negotiation can change it)
     credit_limit: int = 2_000  # limit_for(their card, weekly_allowance); kept up to date by get_profile
     weekly_allowance: int = 0  # a copy of the child's weekly allowance (User.weekly_allowance), set by get_profile
@@ -75,9 +80,9 @@ CARD_SEED: list[Card] = [
         negotiable=False, seller="Whack Bank",
     ),
     Card(
-        id="whack_basic", name="Whack Basic", tier=1, pitch="The starter card. Small limit, friendly terms.",
+        id=STARTER_CARD_ID, name="Calicco Credit", tier=1, pitch="The starter card. Small limit, friendly terms.",
         listed_apr_bp=2000, max_discount_bp=400, limit_multiplier_pct=100, min_score=0, rewards_bp=0,
-        late_fee=0, seller="Mia from Whack Basic",
+        late_fee=0, seller="Mia from Calicco Credit",
     ),
     Card(
         id="chip", name="CapOne Chip", tier=2, pitch="A step up. A higher limit and a little cash back.",
@@ -98,23 +103,15 @@ CARD_SEED: list[Card] = [
 ]
 
 
-MIN_CREDIT_LIMIT = 100  # 1.00 WC: a credit card always has some limit, even with no allowance set
-
-
-def limit_for(card: Card, weekly_allowance: int) -> int:
-    """This card's credit limit for a child with this weekly allowance: Whack Basic 1x, CapOne Chip 1.5x,
-    Venture W 3x, Loan Shark 10x. 0 for Debit."""
-    if card.limit_multiplier_pct <= 0:
-        return 0
-    return max(MIN_CREDIT_LIMIT, weekly_allowance * card.limit_multiplier_pct // 100)
-
-
 # ---- Data access ---------------------------------------------------------------
 
 def list_cards(session: Session) -> list[Card]:
     """All cards in display order. The table is a copy of CARD_SEED: missing rows are added and
     changed values (a new seller name, a tweaked APR) are applied, so editing the seed just works."""
     rows = {c.id: c for c in session.exec(select(Card))}
+    if OLD_STARTER_CARD_ID in rows:
+        _rename_starter_card(session)
+        rows = {c.id: c for c in session.exec(select(Card))}
     changed = False
     for seed in CARD_SEED:
         row = rows.get(seed.id)
@@ -138,18 +135,52 @@ def get_card(session: Session, card_id: str) -> Card | None:
     return session.get(Card, card_id)
 
 
+def _rename_starter_card(session: Session) -> None:
+    """One-off: the starter card was called Whack Basic (id "whack_basic"). Move every reference to the new id."""
+    old, new = OLD_STARTER_CARD_ID, STARTER_CARD_ID
+    for sql in (
+        "UPDATE creditprofile SET current_card_id = :new WHERE current_card_id = :old",
+        # allowed_card_ids is a comma-separated list: pad it with commas so only whole ids match.
+        "UPDATE creditprofile SET allowed_card_ids = TRIM(REPLACE(',' || allowed_card_ids || ',', ',' || :old || ',', "
+        "',' || :new || ','), ',') WHERE ',' || allowed_card_ids || ',' LIKE '%,' || :old || ',%'",
+        "UPDATE statement SET card_id = :new WHERE card_id = :old",
+        "UPDATE negotiationsession SET from_card_id = :new WHERE from_card_id = :old",
+        "UPDATE negotiationsession SET to_card_id = :new WHERE to_card_id = :old",
+        "DELETE FROM card WHERE id = :old",  # list_cards adds the renamed card from CARD_SEED
+    ):
+        session.connection().execute(text(sql), {"old": old, "new": new})
+    session.commit()
+
+
+MIN_CREDIT_LIMIT = 100  # 1.00 WC: a credit card always has some limit, even with no allowance set
+
+
+def limit_for(card: Card, weekly_allowance: int) -> int:
+    """This card's credit limit for a child with this weekly allowance: Calicco Credit 1x, CapOne Chip 1.5x,
+    Venture W 3x, Loan Shark 10x. 0 for Debit."""
+    if card.limit_multiplier_pct <= 0:
+        return 0
+    return max(MIN_CREDIT_LIMIT, weekly_allowance * card.limit_multiplier_pct // 100)
+
+
+def card_limit_for(session: Session, card: Card, user_id: int) -> int:
+    """The credit limit this child gets on this card: a multiple of their weekly allowance (see limit_for)."""
+    user = session.get(User, user_id)
+    return limit_for(card, (user.weekly_allowance or 0) if user else 0)
+
+
 def get_profile(session: Session, user_id: int) -> CreditProfile:
     """The child's credit account, created on first use as a fresh account on the starter card."""
     profile = session.get(CreditProfile, user_id)
     now = datetime.now(UTC)
     if profile is None:
-        starter = get_card(session, "whack_basic")
+        starter = get_card(session, STARTER_CARD_ID)
         assert starter is not None
         profile = CreditProfile(
             user_id=user_id,
             current_card_id=starter.id,
             current_apr_bp=starter.listed_apr_bp,
-            credit_limit=0,  # set from their allowance below
+            credit_limit=card_limit_for(session, starter, user_id),
             sim_now=now,
             opened_at=now,
         )
@@ -160,10 +191,11 @@ def get_profile(session: Session, user_id: int) -> CreditProfile:
     elif profile.sim_now is None:
         # Made before the credit core existed, when balance, limit and APR were demo numbers.
         # Start a real account on the same card.
-        card = get_card(session, profile.current_card_id) or get_card(session, "whack_basic")
+        card = get_card(session, profile.current_card_id) or get_card(session, STARTER_CARD_ID)
         assert card is not None
         profile.current_card_id = card.id
         profile.current_apr_bp = card.listed_apr_bp
+        profile.credit_limit = card_limit_for(session, card, user_id)
         profile.balance = 0
         profile.on_time_streak = 0
         profile.months_open = 0
@@ -179,8 +211,6 @@ def get_profile(session: Session, user_id: int) -> CreditProfile:
         session.commit()
         session.refresh(profile)
     # The limit follows the weekly allowance, so a parent changing the allowance changes it too.
-    from app.models.user import User  # here, not at the top: user.py's imports reach back into the models
-
     child = session.get(User, user_id)
     weekly = (child.weekly_allowance or 0) if child else 0
     card = get_card(session, profile.current_card_id)

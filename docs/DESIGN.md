@@ -29,12 +29,15 @@ spend it on rewards, and watch their credit score react. Claude explains what th
 
 ## 3. Parent dashboard
 
-1. **Kids list:** one card per child (balance, score, next payment). "Add child account" button.
-2. **Child breakdown:** spending, score history, recent transactions, AI weekly recap.
+1. **Kids list** *(built)*: one row per child with balance, card, score (when tracking is on) and next payment, plus
+   "Add child" and a Breakdown link.
+2. **Child breakdown** *(built, `/dashboard/children/:id`)*: spending and earning by kind, what credit has cost,
+   score history with reasons, recent activity, statements, and an AI recap (name-free, numbers checked against the
+   backend's facts, built-in summary if Claude is down). Recap is written on request, not weekly.
 3. **Approvals:** incoming purchase requests (notification, then approve or deny).
 4. **Controls per child:**
    - Weekly allowance amount and payday
-   - Starting credit limit
+   - Credit limit *(built: not set by hand; every card's limit is a multiple of the weekly allowance, see 6.1)*
    - Which credit cards the child can access: parent picks the allowed set (for example 2 to
      start with, pre-selected by age so it's one tap to accept), and the child chooses between
      them at first login
@@ -47,16 +50,17 @@ spend it on rewards, and watch their credit score react. Claude explains what th
 
 Matches the designer's mocks.
 
-1. **Home:** current balance, available credit, breakdown chart, payment due date, recent transactions.
-   Side panel is decor space for owned cosmetics.
+1. **Home** *(built)*: current balance, credit left, payment due date, spending chart (by kind), recent
+   transactions. Left and right side panels show placed decor.
 2. **Rewards:** three rows of item cards.
    - In-game (cosmetics, decor)
    - Weekly (small items)
    - Milestones (parent-set goals)
 3. **Earn money:** chores and extracurriculars the parent has added. Kid marks done, parent approves.
-4. **Monthly review:** AI summary, new credit score, updated plan (interest, limit), "Change plan?".
+4. **Monthly review** *(AI summary built)*: AI summary, new credit score, updated plan (interest, limit), "Change plan?".
 5. **Change plan:** lists cards the parent allows, with a "Negotiate?" button leading to the AI chat.
-6. **Decor:** owned items can be placed in left and right screen sections.
+6. **Decor** *(built, `/decor`)*: owned in-game items placed in the left and right panels (4 per side; pick an item,
+   then a side).
 7. **Learn:** info pages about credit (see 4.1). Linked from the nav, from the score on Home,
    and from the monthly review.
 
@@ -102,7 +106,7 @@ The backend computes all numbers. Claude only explains them.
 
 **Cards** (placeholder names, change before the pitch):
 1. Debit (youngest kids, no credit)
-2. Whack Basic (starter credit card)
+2. Calicco Credit (starter credit card)
 3. CapOne Chip (mid tier)
 4. Venture W (best rewards, needs a high score)
 5. Loan Shark (instant approval, awful APR; the teaching villain)
@@ -134,13 +138,13 @@ build against. All values are starting points; tune them after a playtest.
 | Card | Limit (x weekly allowance) | APR | Score needed | Perk | Notes |
 |---|---|---|---|---|---|
 | Debit | none (own balance) | none | none | none | Default for the youngest kids. Can't go below £0. |
-| Whack Basic | 1x | 20% | none | none | Starter credit card every child can get. |
+| Calicco Credit | 1x | 20% | none | none | Starter credit card every child can get. |
 | CapOne Chip | 1.5x | 15% | 600+ | 1% back | Mid tier, unlocked by a decent score. |
 | Venture W | 3x | 10% | 720+ | 3% back | Best card. Rewards paid as play money. |
 | Loan Shark | 10x | 90% | none, instant | none | £5 late fee. Looks easy, costs the most. The villain. |
 
 Limits scale with the child's weekly allowance (`Card.limit_multiplier_pct`, `card.limit_for`): a child on
-10.00 WC a week gets 10.00 WC on Whack Basic and 100.00 WC on Loan Shark. A credit card's limit is never below
+10.00 WC a week gets 10.00 WC on Calicco Credit and 100.00 WC on Loan Shark. A credit card's limit is never below
 1.00 WC, and it updates when the parent changes the allowance.
 
 Rules:

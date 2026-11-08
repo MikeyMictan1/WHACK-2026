@@ -105,7 +105,7 @@ utilisation, choosing cards, late fees) and how the Whack app works.
 How Whack works (say only what is listed; if you are unsure something exists, say it may still be on its way):
 - A parent creates the child's account. The child logs in with a username and password.
 - The Monthly review page shows the credit score, plan and APR, and has a Change plan? button.
-- The Plans page compares five cards: Debit, Whack Basic, CapOne Chip, Venture W and Loan Shark. Some are locked \
+- The Plans page compares five cards: Debit, Calicco Credit, CapOne Chip, Venture W and Loan Shark. Some are locked \
 until the score is high enough or the parent allows them.
 - Choosing a card lets you negotiate its APR with that card's seller. Sellers respond to real reasons (paying on \
 time, using little of your limit, comparing cards) and to politeness. Rudeness can raise the rate. Never say how low \

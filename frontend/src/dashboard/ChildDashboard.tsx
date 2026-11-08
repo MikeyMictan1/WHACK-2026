@@ -6,6 +6,10 @@ import { Skeleton } from '../components/ui/Skeleton.tsx'
 import { creditApi, formatDate, type CreditSummary } from '../credit/creditApi.ts'
 import { formatMoney } from '../lib/money.ts'
 import { PushToggle } from '../push/PushToggle.tsx'
+import { DecorPanel } from '../decor/DecorPanel.tsx'
+import { DecorTile } from '../decor/DecorTile.tsx'
+import { decorApi, type DecorItem, type Spending } from '../decor/decorApi.ts'
+import { Bar } from '../monthly/ScoreSection.tsx'
 import { shopApi, type Wallet } from '../shop/shopApi.ts'
 
 /** The child's home: balance, their card, ways to spend and earn, recent transactions. */
@@ -13,9 +17,14 @@ export function ChildDashboard({ child }: { child: User }) {
   const [wallet, setWallet] = useState<Wallet | null>(null)
   const [credit, setCredit] = useState<CreditSummary | null>(null)
 
+  const [decor, setDecor] = useState<DecorItem[]>([])
+  const [spending, setSpending] = useState<Spending | null>(null)
+
   useEffect(() => {
     shopApi.wallet().then(setWallet).catch(() => {})
     creditApi.get().then(setCredit).catch(() => {})
+    decorApi.get().then((d) => setDecor(d.items)).catch(() => {})
+    decorApi.spending().then(setSpending).catch(() => {})
   }, [])
 
   return (
@@ -23,6 +32,22 @@ export function ChildDashboard({ child }: { child: User }) {
       <PageHeader marker="Your dashboard" title={`Hi, ${nameOf(child)}.`} />
 
       <section className="container-x py-10 md:py-14">
+        <div className="grid gap-8 lg:grid-cols-[150px_minmax(0,1fr)_150px]">
+        <div className="hidden lg:block">
+          <DecorPanel side="left" items={decor} />
+        </div>
+        <div>
+        {decor.some((i) => i.side) && (
+          <ul className="mb-8 grid grid-cols-4 gap-3 sm:grid-cols-6 lg:hidden">
+            {decor
+              .filter((i) => i.side)
+              .map((i) => (
+                <li key={i.reward_id}>
+                  <DecorTile item={i} />
+                </li>
+              ))}
+          </ul>
+        )}
         <div className="grid gap-10 border-t border-ink pt-8 md:grid-cols-[1fr_auto] md:items-end">
           <div>
             <p className="meta">Current balance</p>
@@ -37,10 +62,15 @@ export function ChildDashboard({ child }: { child: User }) {
             <ButtonLink to="/earn" variant="light" className="border border-ink">
               Earn money
             </ButtonLink>
+            <ButtonLink to="/decor" variant="light" className="border border-ink">
+              Decor
+            </ButtonLink>
           </div>
         </div>
 
         {credit && <CardGlance credit={credit} />}
+
+        <SpendingChart spending={spending} />
 
         <div className="mt-10">
           <PushToggle what="when your parent approves what you want to buy" />
@@ -74,7 +104,43 @@ export function ChildDashboard({ child }: { child: User }) {
             Account and log out
           </ButtonLink>
         </div>
+        </div>
+        <div className="hidden lg:block">
+          <DecorPanel side="right" items={decor} />
+        </div>
+        </div>
       </section>
+    </>
+  )
+}
+
+/** Where the child's money has gone so far, by kind of item. */
+function SpendingChart({ spending }: { spending: Spending | null }) {
+  return (
+    <>
+      <h2 className="mt-14 border-b border-ink pb-3 text-d3 font-light">Where your money went</h2>
+      {!spending && <Skeleton className="mt-4 h-24 w-full" />}
+      {spending && spending.rows.length === 0 && <p className="py-6 text-muted">You have not bought anything yet.</p>}
+      {spending && spending.rows.length > 0 && (
+        <>
+          <ul className="mt-4 flex flex-col gap-4">
+            {spending.rows.map((r) => (
+              <li key={r.key}>
+                <div className="flex items-baseline justify-between gap-4">
+                  <p className="font-medium">
+                    {r.label} <span className="text-muted">({r.count})</span>
+                  </p>
+                  <p className="tabular-nums">{formatMoney(r.total)}</p>
+                </div>
+                <div className="mt-2">
+                  <Bar value={r.total} max={Math.max(spending.total, 1)} label={`${r.label}: ${formatMoney(r.total)} of ${formatMoney(spending.total)}`} />
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="meta mt-4">Total spent {formatMoney(spending.total)}</p>
+        </>
+      )}
     </>
   )
 }

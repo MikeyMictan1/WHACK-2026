@@ -57,6 +57,7 @@ export type ChildInput = {
   weekly_allowance: number
   app_experience: string
   card_type: string
+  /** Minor units, 1.00 to 100.00 WC. null = the card's own limit. */
   weekly_items: WeeklyItemInput[]
   milestones: MilestoneInput[]
 }

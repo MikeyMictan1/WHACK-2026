@@ -12,8 +12,7 @@ reasons it moved); see DESIGN.md section 6.
    start; no DB reset needed this time).
 2. **Seed script.** `backend/scripts/seed.py`: one parent, two kids with some money, a few purchases.
    Every column change wipes the DB, so this saves everyone time.
-3. **Child setup options** on "Add child": weekly allowance, payday, starting credit limit, allowed
-   cards. Store on a new `ChildSettings` table (new table, so no DB reset).
+3. **Child setup options** on "Add child": weekly allowance, payday, allowed cards *(credit limits scale with the weekly allowance)*. Store on a new `ChildSettings` table (new table, so no DB reset).
 4. **Simulated time** *(built: "Skip a month", 4 weeks, pays 4 weekly allowances; no payday setting yet)*.
 5. **Credit core** *(built: card on the child, buying on credit, statements, paying them, interest, late fees,
    cash back, one plan change a month, and the credit score with the reasons it moved)*. See DESIGN.md

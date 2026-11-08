@@ -5,7 +5,7 @@
 
 Demo logins (play money only, local use):
     parent   demo_parent   whack-demo-1    has example rewards and chores, and sees both kids
-    child    demo_kid      1234            younger kid on the starter card (Whack Basic); credit score tracking off (13+)
+    child    demo_kid      1234            younger kid on the starter card (Calicco Credit); credit score tracking off (13+)
     child    demo_teen     1234            older kid with a stronger record (can unlock Venture W); credit score on
 Each kid starts with some money in their balance, so they can buy things and pay statements.
 Use the parent dashboard's "Skip a month" to issue statements.
@@ -38,7 +38,7 @@ CHILDREN = [
         "items": [("Ice cream", 300, 2), ("Extra screen time", 500, 1)],
         "milestones": [("New bike", 20000)],
         "start_money": 2000,  # 20.00 WC in their own balance
-        "profile": {},  # a fresh credit account: score 580 (Fair), on Whack Basic, owing nothing. Score tracking is off at 13+
+        "profile": {},  # a fresh credit account: score 580 (Fair), on Calicco Credit, owing nothing. Score tracking is off at 13+
     },
     {
         "username": "demo_teen",

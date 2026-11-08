@@ -3,12 +3,15 @@
 from app.models.card import Card, CreditProfile
 from app.models.clock import SiteClock
 from app.models.credit import CreditEntry, Statement
+from app.models.decor import DecorPlacement
 from app.models.score import ScoreEvent
+from app.models.story import MonthlyStory
 from app.models.help import HelpMessage
 from app.models.led import LedEquip, RewardSkin
 from app.models.milestone import Milestone
 from app.models.negotiation import NegotiationMessage, NegotiationSession
 from app.models.push import PushKeys, PushSubscription
+from app.models.recap import Recap
 from app.models.shop import (
     CardLink,
     Chore,
@@ -47,6 +50,9 @@ __all__ = [
     "PushKeys",
     "PushSubscription",
     "Reward",
+    "DecorPlacement",
+    "MonthlyStory",
+    "Recap",
     "ScoreEvent",
     "RewardSkin",
     "SiteClock",

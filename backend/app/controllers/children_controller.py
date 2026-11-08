@@ -19,9 +19,12 @@ from sqlmodel import col, delete, select
 
 from app.models.card import CreditProfile
 from app.models.credit import CreditEntry, Statement
+from app.models.decor import DecorPlacement
 from app.models.help import HelpMessage
 from app.models.milestone import delete_milestones, list_milestones, replace_milestones
+from app.models.recap import Recap
 from app.models.score import ScoreEvent
+from app.models.story import MonthlyStory
 from app.models.negotiation import NegotiationMessage, NegotiationSession
 from app.models.shop import CardLink, ChoreClaim, LedgerEntry, PurchaseRequest
 from app.models.vault import Vault
@@ -107,7 +110,7 @@ def delete_child(child_id: int, parent: CurrentParent, session: SessionDep) -> N
         session.delete(vault)
     delete_weekly_items(session, child_id)
     delete_milestones(session, child_id)
-    for table in (LedgerEntry, PurchaseRequest, ChoreClaim, CardLink, CreditEntry, Statement, ScoreEvent):
+    for table in (LedgerEntry, PurchaseRequest, ChoreClaim, CardLink, CreditEntry, Statement, ScoreEvent, Recap, DecorPlacement, MonthlyStory):
         session.exec(delete(table).where(table.child_id == child.id))  # type: ignore[call-overload]
     negotiation_ids = session.exec(select(NegotiationSession.id).where(NegotiationSession.user_id == child.id)).all()
     if negotiation_ids:

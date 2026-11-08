@@ -29,6 +29,9 @@ class User(SQLModel, table=True):
     weekly_allowance: int | None = None  # children only, minor units (1/100 WC)
     app_experience: str | None = Field(default=None, max_length=20)  # children only
     card_type: str | None = Field(default=None, max_length=100)  # children only: comma-separated
+    # Unused: a parent-set starter-card limit, replaced by limits that scale with the weekly allowance
+    # (models/card.limit_for). Kept so existing databases keep working.
+    starting_credit_limit: int | None = None
     created_at: datetime = Field(default_factory=lambda: site_now())
 
 

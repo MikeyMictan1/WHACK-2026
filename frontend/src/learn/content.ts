@@ -168,7 +168,7 @@ export const UTILISATION_BANDS = [
 
 /** The app's real card rates, in a simple example: carry 50 WC for a year and spend 10 WC a month. */
 export const CARD_EXAMPLES = [
-  { name: 'Whack Basic', apr: 20, cashBack: 0 },
+  { name: 'Calicco Credit', apr: 20, cashBack: 0 },
   { name: 'Venture W', apr: 10, cashBack: 3 },
   { name: 'Loan Shark', apr: 90, cashBack: 0 },
 ]
