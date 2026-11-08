@@ -61,4 +61,4 @@ The app works without it.
 
 - `'vite' is not recognized`: you skipped `npm run setup`.
 - Port already in use: `scripts/project-stop`, then start again.
-- More in [RUNBOOK.md](RUNBOOK.md).
+- More in [RUNBOOK.md](RUNBOOK.md) (setup, demo accounts, hardware, phones, deploying, laptop bridge).
