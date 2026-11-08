@@ -150,11 +150,11 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
   passes, interest and any late fee, a new `Statement`. Statements are due 14 days after they are issued.
   This is separate from the admin's site clock (`models/clock.py`, `site_now()`), which the shop uses.
 - The seeded cards follow DESIGN.md 6.1 (`models/card.py`). Credit limits are not fixed amounts: each card has a
-  `limit_multiplier_pct` of the child's weekly allowance (Calicco Credit 1x, Chip 1.5x, Venture W 3x, Loan Shark 10x, at
+  `limit_multiplier_pct` of the child's weekly allowance (CaliccoCredit 1x, Cap One 1.5x, Venture <W> 3x, The Shark Father 10x, at
   least 1.00 WC). `get_profile` copies the allowance onto `CreditProfile.weekly_allowance` and keeps
   `credit_limit` in step. For a card the child isn't on, use `card_limit_for(session, card, user_id)` or
   `limit_for(card, profile.weekly_allowance)`, never `card.credit_limit` (an unused leftover column, like
-  `User.starting_credit_limit`). The starter card is Calicco Credit (`STARTER_CARD_ID = "calicco_credit"`); it was
+  `User.starting_credit_limit`). The starter card is CaliccoCredit (`STARTER_CARD_ID = "calicco_credit"`); it was
   Whack Basic (`whack_basic`), and `list_cards` moves old data to the new id once.
 - The credit score (`models/score.py`) is 300 + payment history (250) + credit used (150) + history (100). It is
   recalculated only in `advance_month`, and every change is saved as a `ScoreEvent` with its reason. It is always
@@ -197,7 +197,7 @@ Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plan
 
 - Numbers are the backend's: `models/pricing.py` computes the floor APR from score, payment streak and
   utilisation, and `clamp_offer` limits every bot offer (down to the floor in steps; up per rude message by the card's `penalty_step_bp`, at most `max_penalty_bp` over the listed APR: 1 and 3 points,
-  but Loan Shark punishes hard, 2.5 and 5 points; politeness takes a penalty back off 1 point a message). The bot (`core/seller_bot.py`) never sees the
+  but The Shark Father punishes hard, 2.5 and 5 points; politeness takes a penalty back off 1 point a message). The bot (`core/seller_bot.py`) never sees the
   floor; it calls a `make_offer` tool and is told what was recorded. The UI shows the recorded offer.
 - `models/card.py` seeds the five cards and holds `CreditProfile`, the child's credit account (their card,
   what they owe, their clock, their score and its three parts; created on first use through `get_profile`, which

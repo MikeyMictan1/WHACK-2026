@@ -5,8 +5,8 @@
 
 Demo logins (play money only, local use):
     parent   demo_parent   whack-demo-1    has example rewards and chores, and sees both kids
-    child    demo_kid      1234            younger kid on the starter card (Calicco Credit); credit score tracking off (13+)
-    child    demo_teen     1234            older kid with a stronger record (can unlock Venture W); credit score on
+    child    demo_kid      1234            younger kid on the starter card (CaliccoCredit); credit score tracking off (13+)
+    child    demo_teen     1234            older kid with a stronger record (can unlock Venture <W>); credit score on
 Each kid starts with some money in their balance, so they can buy things and pay statements.
 Use the parent dashboard's "Skip a month" to issue statements.
 """
@@ -38,7 +38,7 @@ CHILDREN = [
         "items": [("Ice cream", 300, 2), ("Extra screen time", 500, 1)],
         "milestones": [("New bike", 20000)],
         "start_money": 2000,  # 20.00 WC in their own balance
-        "profile": {},  # a fresh credit account: score 580 (Fair), on Calicco Credit, owing nothing. Score tracking is off at 13+
+        "profile": {},  # a fresh credit account: score 580 (Fair), on CaliccoCredit, owing nothing. Score tracking is off at 13+
     },
     {
         "username": "demo_teen",
@@ -51,7 +51,7 @@ CHILDREN = [
         "milestones": [("Concert ticket", 12000), ("Headphones", 8000)],
         "start_money": 5000,
         # A record from before the app: six good months of payments on a nine-month-old account (score 715).
-        # One more good month takes it past the 720 that Venture W needs. Score tracking is on at 15+.
+        # One more good month takes it past the 720 that Venture <W> needs. Score tracking is on at 15+.
         "profile": {"on_time_streak": 6, "months_open": 9, "score_payment": 190},
     },
 ]

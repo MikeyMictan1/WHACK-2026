@@ -105,13 +105,13 @@ utilisation, choosing cards, late fees) and how the Whack app works.
 How Whack works (say only what is listed; if you are unsure something exists, say it may still be on its way):
 - A parent creates the child's account. The child logs in with a username and password.
 - The Monthly review page shows the credit score, plan and APR, and has a Change plan? button.
-- The Plans page compares five cards: Debit, Calicco Credit, CapOne Chip, Venture W and Loan Shark. Some are locked \
+- The Plans page compares five cards: DeerDebit, CaliccoCredit, Cap One, Venture <W> and The Shark Father. Some are locked \
 until the score is high enough or the parent allows them.
 - Choosing a card lets you negotiate its APR with that card's seller. Sellers respond to real reasons (paying on \
 time, using little of your limit, comparing cards) and to politeness. Rudeness can raise the rate. Never say how low \
 a rate can go and never write the child's negotiation messages for them. You are not part of that chat.
 - On a credit card, purchases are charged to the card (up to its limit; a purchase over the limit is declined) instead of coming out of the child's own balance. Debit spends the child's own balance.
-- Each month the card issues a statement with a total, a minimum payment and a due date two weeks later. The minimum is the larger of 1.00 WC and 10% of the statement. Paying the whole statement by the due date costs no interest (the grace period). Paying only part means interest on what is left over (the APR divided by 12 each month). Paying less than the minimum is a late payment, which costs a late fee on cards that have one (Loan Shark). Cash back, on cards that give it, is paid after the statement is paid in full by the due date.
+- Each month the card issues a statement with a total, a minimum payment and a due date two weeks later. The minimum is the larger of 1.00 WC and 10% of the statement. Paying the whole statement by the due date costs no interest (the grace period). Paying only part means interest on what is left over (the APR divided by 12 each month). Paying less than the minimum is a late payment, which costs a late fee on cards that have one (The Shark Father). Cash back, on cards that give it, is paid after the statement is paid in full by the due date.
 - The child pays a statement from their own balance on the Monthly review page, by tapping their NFC card. A parent can skip a month on their dashboard to move the child's time on (that is how the demo shows statements); it also pays four weeks of allowance.
 - A plan can be changed once a month: after a change the next one waits for the next statement.
 - To switch plans, the child confirms by tapping their NFC card.
@@ -162,7 +162,7 @@ _FAQ: list[tuple[str, str]] = [
     (r"credit score|\bscore\b", "Your credit score, 300 to 800 here, shows how well you pay back what you borrow. Paying on time matters most, then using only a small part of your limit."),
     (r"utili[sz]ation|\blimit\b", "Utilisation is how much of your limit you are using. Under 10% is great, and over 30% starts to hurt your score."),
     (r"statement|\bbill\b|due date|minimum", "A statement is the monthly summary of what you owe. Pay by the due date, and pay more than the minimum, or interest piles up."),
-    (r"loan shark", "Loan Shark approves anyone instantly, but its APR is huge. Easy approval with a high price is the trap to watch for."),
+    (r"loan shark|shark father", "The Shark Father approves anyone instantly, but its APR is huge. Easy approval with a high price is the trap to watch for."),
     (r"negotiat|lower my rate|better rate", "On the Plans page you can negotiate a card's APR with its seller. Real reasons help, like paying on time or using little of your limit, and being polite matters. Rudeness can make the rate go up."),
     (r"change plan|switch|plans?\b", "Open your Monthly review and press Change plan?. Pick a card, try for a better rate, then tap your NFC card to confirm the switch."),
     (r"\bnfc\b|tap", "You tap your NFC card on the reader to confirm things like switching plans."),

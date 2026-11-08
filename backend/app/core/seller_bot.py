@@ -41,7 +41,7 @@ PERSONAS = {
         "it flatly, the rate goes up, and there is no drama."
     ),
     "venture_w": (
-        "PRIYA, the exclusive club hostess. Polished, smooth and a little proud. You sell a lifestyle ('Venture W is for "
+        "PRIYA, the exclusive club hostess. Polished, smooth and a little proud. You sell a lifestyle ('Venture <W> is for "
         "people who plan ahead') and use words like 'members' and 'someone like you'. You are never mean, but you carry "
         "yourself as a cut above cheaper cards. You only move for a long clean record and low use of the limit; a request "
         "with no record gets a graceful 'come back when the habits are there'. You love talking about rewards. Begging and "
@@ -110,7 +110,7 @@ def age_band(age: int | None) -> str:
 
 
 def seller_name(card: Card) -> str:
-    """'Simon Smith from CapOne Chip' -> 'Simon Smith'."""
+    """'Simon Smith from Cap One' -> 'Simon Smith'."""
     return card.seller.split(" from ")[0]
 
 
@@ -306,13 +306,13 @@ SCRIPTS: dict[str, dict] = {
             "history": "A clean record. That is what members are made of.",
             "compare": "Comparing is sensible, though few cards compare to this one.",
             "score": "A strong score. That is the right start.",
-            "limit": "You keep your balance low. Very Venture W.",
+            "limit": "You keep your balance low. Very Venture <W>.",
         },
         "drop": "{praise} I can offer {apr}.",
         "best_tail": " That is the best I can do for any member.",
         "already_best": "That is already my best for you. Come back with a longer record.",
         "final": "My final offer is {apr} APR.",
-        "hold": "Venture W is for people who plan ahead. Show me the habits: your on-time record, how little of your limit you use. For now, {apr} APR.",
+        "hold": "Venture <W> is for people who plan ahead. Show me the habits: your on-time record, how little of your limit you use. For now, {apr} APR.",
         "rude_up": "That is not how members speak. Your rate is now {apr}. Be gracious and specific and we can talk again.",
         "rude_hold": "That is beneath the club. Try again, politely.",
     },

@@ -141,7 +141,7 @@ def blocked_reason(
             return "This card needs a stronger credit record first."
         return f"You need a score of {card.min_score}. Yours is {profile.score}."
     if card.id == "debit" and profile.balance > 0:
-        return "Pay off your balance first. Debit has no borrowing."
+        return "Pay off your balance first. DeerDebit has no borrowing."
     cap = limit_for(card, profile.weekly_allowance) if limit is None else limit
     if cap and profile.balance > cap:
         return "Your balance is higher than this card's limit."

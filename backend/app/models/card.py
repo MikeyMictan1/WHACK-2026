@@ -37,7 +37,7 @@ class Card(SQLModel, table=True):
     penalty_step_bp: int = 100
     max_penalty_bp: int = 300
     negotiable: bool = True
-    seller: str  # who the child talks to, e.g. "Mia from Calicco Credit"
+    seller: str  # who the child talks to, e.g. "Mia from CaliccoCredit"
 
 
 class CreditProfile(SQLModel, table=True):
@@ -76,29 +76,29 @@ class CreditProfile(SQLModel, table=True):
 
 CARD_SEED: list[Card] = [
     Card(
-        id="debit", name="Debit", tier=0, pitch="Spend only what you have. No borrowing, no interest.",
+        id="debit", name="DeerDebit", tier=0, pitch="Spend only what you have. No borrowing, no interest.",
         listed_apr_bp=0, max_discount_bp=0, limit_multiplier_pct=0, min_score=0, rewards_bp=0, late_fee=0,
         negotiable=False, seller="Whack Bank",
     ),
     Card(
-        id=STARTER_CARD_ID, name="Calicco Credit", tier=1, pitch="The starter card. Small limit, friendly terms.",
+        id=STARTER_CARD_ID, name="CaliccoCredit", tier=1, pitch="The starter card. Small limit, friendly terms.",
         listed_apr_bp=2000, max_discount_bp=400, limit_multiplier_pct=100, min_score=0, rewards_bp=0,
-        late_fee=0, seller="Mia from Calicco Credit",
+        late_fee=0, seller="Mia from CaliccoCredit",
     ),
     Card(
-        id="chip", name="CapOne Chip", tier=2, pitch="A step up. A higher limit and a little cash back.",
+        id="chip", name="Cap One", tier=2, pitch="A step up. A higher limit and a little cash back.",
         listed_apr_bp=1500, max_discount_bp=300, limit_multiplier_pct=150, min_score=600, rewards_bp=100,
-        late_fee=0, seller="Simon Smith from CapOne Chip",
+        late_fee=0, seller="Simon Smith from Cap One",
     ),
     Card(
-        id="venture_w", name="Venture W", tier=3, pitch="Best rewards and the lowest rates, for strong scores.",
+        id="venture_w", name="Venture <W>", tier=3, pitch="Best rewards and the lowest rates, for strong scores.",
         listed_apr_bp=1000, max_discount_bp=200, limit_multiplier_pct=300, min_score=720, rewards_bp=300,
-        late_fee=0, seller="Priya from Venture W",
+        late_fee=0, seller="Priya from Venture <W>",
     ),
     Card(
-        id="loan_shark", name="Loan Shark", tier=4, pitch="Instant approval, no questions. Look at the interest.",
+        id="loan_shark", name="The Shark Father", tier=4, pitch="Instant approval, no questions. Look at the interest.",
         listed_apr_bp=9000, max_discount_bp=100, limit_multiplier_pct=1000, min_score=0, rewards_bp=0,
-        late_fee=500, seller="Linguini from Loan Shark",
+        late_fee=500, seller="Linguini from The Shark Father",
         penalty_step_bp=250, max_penalty_bp=500,  # he punishes rudeness hard: up to 5 points above his rate
     ),
 ]
@@ -179,8 +179,8 @@ MIN_CREDIT_LIMIT = 100  # 1.00 WC: a credit card always has some limit, even wit
 
 
 def limit_for(card: Card, weekly_allowance: int) -> int:
-    """This card's credit limit for a child with this weekly allowance: Calicco Credit 1x, CapOne Chip 1.5x,
-    Venture W 3x, Loan Shark 10x. 0 for Debit."""
+    """This card's credit limit for a child with this weekly allowance: CaliccoCredit 1x, Cap One 1.5x,
+    Venture <W> 3x, The Shark Father 10x. 0 for DeerDebit."""
     if card.limit_multiplier_pct <= 0:
         return 0
     return max(MIN_CREDIT_LIMIT, weekly_allowance * card.limit_multiplier_pct // 100)

@@ -73,7 +73,7 @@ Static pages, short and friendly, written for ages 10 to 18. No AI needed to ren
 3. APR and interest: why borrowing costs money, with a worked example
 4. Statements: balance, minimum payment, due date, what happens if you're late
 5. Utilisation: why using less of your limit is better
-6. Choosing a card: what rewards, limits and fees mean (and why the Loan Shark is a trap)
+6. Choosing a card: what rewards, limits and fees mean (and why The Shark Father is a trap)
 7. Glossary: short definitions the UI and AI link to
 
 Each page ends with a "Try it" link to the matching dashboard section. Parents get the same pages
@@ -105,11 +105,11 @@ The app always shows why the score moved (for example "+12 paid on time, -8 util
 The backend computes all numbers. Claude only explains them.
 
 **Cards** (placeholder names, change before the pitch):
-1. Debit (youngest kids, no credit)
-2. Calicco Credit (starter credit card)
-3. CapOne Chip (mid tier)
-4. Venture W (best rewards, needs a high score)
-5. Loan Shark (instant approval, awful APR; the teaching villain)
+1. DeerDebit (youngest kids, no credit)
+2. CaliccoCredit (starter credit card)
+3. Cap One (mid tier)
+4. Venture <W> (best rewards, needs a high score)
+5. The Shark Father (instant approval, awful APR; the teaching villain)
 
 **Monthly:** score updates, plan changes (APR, limit), kid can switch within what the parent allows.
 
@@ -121,7 +121,7 @@ The backend computes all numbers. Claude only explains them.
 | Credit used | up to 150 (30%) | Statement total divided by the limit: full marks at 10% or less, then falling in straight lines through 30% (105), 50% (60) to 0 at 100%. |
 | Length of history | up to 100 (20%) | 100 over the first 12 months open. |
 
-- A new account starts at 580 (Fair). CapOne Chip needs 600 and Venture W 720, so good habits unlock cards.
+- A new account starts at 580 (Fair). Cap One needs 600 and Venture <W> 720, so good habits unlock cards.
 - It is recalculated once a month, when a statement is issued ("Skip a month"). Every change is saved with its reason (`ScoreEvent`), for example "+14 Statement 1 paid in full on time" or "-34 You used 25% of your limit".
 - Debit has no credit to measure, so only a statement paid on time counts there; usage and history are left alone.
 - The backend always tracks it. A parent decides whether the child sees it (the age preset or the Custom "credit score" option); when it is off the child sees an explanation, the AI never names a number, and locked cards say "needs a stronger credit record".
@@ -137,14 +137,14 @@ build against. All values are starting points; tune them after a playtest.
 
 | Card | Limit (x weekly allowance) | APR | Score needed | Perk | Notes |
 |---|---|---|---|---|---|
-| Debit | none (own balance) | none | none | none | Default for the youngest kids. Can't go below £0. |
-| Calicco Credit | 1x | 20% | none | none | Starter credit card every child can get. |
-| CapOne Chip | 1.5x | 15% | 600+ | 1% back | Mid tier, unlocked by a decent score. |
-| Venture W | 3x | 10% | 720+ | 3% back | Best card. Rewards paid as play money. |
-| Loan Shark | 10x | 90% | none, instant | none | £5 late fee. Looks easy, costs the most. The villain. |
+| DeerDebit | none (own balance) | none | none | none | Default for the youngest kids. Can't go below £0. |
+| CaliccoCredit | 1x | 20% | none | none | Starter credit card every child can get. |
+| Cap One | 1.5x | 15% | 600+ | 1% back | Mid tier, unlocked by a decent score. |
+| Venture <W> | 3x | 10% | 720+ | 3% back | Best card. Rewards paid as play money. |
+| The Shark Father | 10x | 90% | none, instant | none | £5 late fee. Looks easy, costs the most. The villain. |
 
 Limits scale with the child's weekly allowance (`Card.limit_multiplier_pct`, `card.limit_for`): a child on
-10.00 WC a week gets 10.00 WC on Calicco Credit and 100.00 WC on Loan Shark. A credit card's limit is never below
+10.00 WC a week gets 10.00 WC on CaliccoCredit and 100.00 WC on The Shark Father. A credit card's limit is never below
 1.00 WC, and it updates when the parent changes the allowance.
 
 Rules:
@@ -160,7 +160,7 @@ Rules:
 5. **Perks** (cashback) are credited after the statement is paid, not at purchase, so rewards
    come from paying on time.
 6. **Switching cards:** monthly, only to cards the parent allows and the score qualifies for.
-   Loan Shark is always available unless the parent blocks it, to show why "instant approval"
+   The Shark Father is always available unless the parent blocks it, to show why "instant approval"
    is a trap.
 
 **Interest is too small to feel at these amounts.** 20% a year on £20 is about 33p a month. Two
@@ -183,7 +183,7 @@ Recommended: option 2. It stays honest and still lands the point.
 - Interest is on the unpaid part of the previous statement, at the APR in force on statement day. Paid in full
   by the due date means none (the grace period).
 - The minimum is the larger of 1.00 WC and 10%, never more than the statement. Below it by the due date is
-  late: the late fee (Loan Shark only) and a broken on-time streak. Paying the minimum or more is not late; the
+  late: the late fee (The Shark Father only) and a broken on-time streak. Paying the minimum or more is not late; the
   rest is carried over and charged interest.
 - Cash back is paid into the child's balance when a statement is paid in full by its due date. A carried or
   late statement forfeits it. Each purchase earns the rate of the card it was bought on.

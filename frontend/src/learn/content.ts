@@ -78,7 +78,7 @@ export const TOPICS: Topic[] = [
     lines: [
       'Compare the APR first, then the fees, then the rewards.',
       'Cash back sounds nice, but if you carry a balance the interest usually costs more than the rewards pay.',
-      'Loan Shark approves anyone instantly. The price is a huge APR.',
+      'The Shark Father approves anyone instantly. The price is a huge APR.',
     ],
     demo: 'cards',
     tryIt: { to: '/plans', label: 'Compare the plans' },
@@ -135,7 +135,7 @@ export const SCORE_EVENTS = [
 export const INTEREST_ROWS = [
   { name: 'Low rate', apr: 10 },
   { name: 'Typical card', apr: 20 },
-  { name: 'Loan Shark', apr: 90 },
+  { name: 'The Shark Father', apr: 90 },
 ]
 
 // ---- Statements ----------------------------------------------------------------------------
@@ -168,9 +168,9 @@ export const UTILISATION_BANDS = [
 
 /** The app's real card rates, in a simple example: carry 50 WC for a year and spend 10 WC a month. */
 export const CARD_EXAMPLES = [
-  { name: 'Calicco Credit', apr: 20, cashBack: 0 },
-  { name: 'Venture W', apr: 10, cashBack: 3 },
-  { name: 'Loan Shark', apr: 90, cashBack: 0 },
+  { name: 'CaliccoCredit', apr: 20, cashBack: 0 },
+  { name: 'Venture <W>', apr: 10, cashBack: 3 },
+  { name: 'The Shark Father', apr: 90, cashBack: 0 },
 ]
 export const CARD_BALANCE = 50
 export const CARD_MONTHLY_SPEND = 10
@@ -206,7 +206,7 @@ export const MYTHS = [
   {
     claim: 'A card that approves anyone instantly is a good sign.',
     isTrue: false,
-    why: 'Easy approval usually comes with a huge APR. That is how Loan Shark works.',
+    why: 'Easy approval usually comes with a huge APR. That is how The Shark Father works.',
   },
 ]
 

@@ -333,7 +333,7 @@ function CardsDemo() {
               ))}
             </tbody>
           </table>
-          <p className="meta mt-3">Made-up numbers to show the idea. Venture W needs a high score to get.</p>
+          <p className="meta mt-3">Made-up numbers to show the idea. {'Venture <W> needs a high score to get.'}</p>
         </div>
       )}
     </Panel>
