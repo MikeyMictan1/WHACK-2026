@@ -29,7 +29,7 @@ def _claim_public(session: Session, claim: ChoreClaim) -> ChoreClaimPublic:
         id=claim.id,
         chore_id=claim.chore_id,
         child_id=claim.child_id,
-        child_name=(child.display_name or child.username) if child else "Unknown",
+        child_name=child.username if child else "Unknown",
         title=chore.title if chore else "Removed chore",
         amount=chore.amount if chore else 0,
         status=claim.status,
@@ -99,7 +99,7 @@ def claim_chore(chore_id: int, user: CurrentUser, session: SessionDep) -> ChoreC
     session.refresh(claim)
     notify(
         user.parent_id,
-        f"{user.display_name or user.username} did: {chore.title}",
+        f"{user.username} did: {chore.title}",
         f"Open Teenacredit to approve and pay {money(chore.amount)}.",
     )
     return _claim_public(session, claim)

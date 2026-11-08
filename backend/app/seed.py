@@ -2,6 +2,7 @@
 
     npm run seed          add the demo accounts if they are missing (safe to repeat)
     npm run seed:reset    erase EVERY table first, then add them (works while the backend is running)
+    scripts/wipe          erase EVERY table and leave it empty (only the built-in admin), see --empty
 
 Demo logins (play money only, local use):
     parent   demo_parent   whack-demo-1    has example rewards and chores, and sees both kids
@@ -25,16 +26,15 @@ from app.models.shop import add_entry, add_starter_items
 from app.models.user import User, create_user, get_user_by_username
 from app.models.weekly_item import WeeklyItemInput, replace_weekly_items
 
-PARENT = {"username": "demo_parent", "password": "whack-demo-1", "display_name": "Demo Parent"}
+PARENT = {"username": "demo_parent", "password": "whack-demo-1"}
 
 CHILDREN = [
     {
         "username": "demo_kid",
         "password": "1234",
-        "display_name": "Kit",
         "weekly_allowance": 1000,  # minor units (1/100 WC): 10.00 WC
         "app_experience": "13+",
-        "card_type": "deer_debit,shark_father,calicco_credit",  # what the 13+ preset ticks
+        "card_type": "deer_debit,shark_father,calicco_credit,cap_one",  # what the 13+ preset ticks
         "items": [("Ice cream", 300, 2), ("Extra screen time", 500, 1)],
         "milestones": [("New bike", 20000)],
         "start_money": 2000,  # 20.00 WC in their own balance
@@ -43,7 +43,6 @@ CHILDREN = [
     {
         "username": "demo_teen",
         "password": "1234",
-        "display_name": "Alex",
         "weekly_allowance": 2500,
         "app_experience": "15+",
         "card_type": "deer_debit,shark_father,cap_one,venture_w,calicco_credit",  # 15+: every card
@@ -67,7 +66,7 @@ def _get_or_create_parent(session: Session) -> User:
         username=PARENT["username"],
         hashed_password=hash_password(PARENT["password"]),
         role="parent",
-        display_name=PARENT["display_name"],
+        display_name=None,
     )
     assert parent.id is not None
     add_starter_items(session, parent.id)  # the same example rewards and chores a real sign-up gets
@@ -85,7 +84,7 @@ def _get_or_create_child(session: Session, parent: User, spec: dict) -> None:
         hashed_password=hash_password(spec["password"]),
         role="child",
         parent_id=parent.id,
-        display_name=spec["display_name"],
+        display_name=None,
         weekly_allowance=spec["weekly_allowance"],
         app_experience=spec["app_experience"],
         card_type=spec["card_type"],
@@ -107,6 +106,7 @@ def _get_or_create_child(session: Session, parent: User, spec: dict) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Add demo accounts and data.")
     parser.add_argument("--reset", action="store_true", help="erase every table first")
+    parser.add_argument("--empty", action="store_true", help="with --reset: stop after erasing (no demo accounts)")
     args = parser.parse_args()
 
     import app.models  # noqa: F401  (registers every table, so --reset knows what to drop)
@@ -114,7 +114,10 @@ def main() -> None:
     if args.reset:
         SQLModel.metadata.drop_all(engine)
         print("Erased all tables.")
-    init_db()
+    init_db()  # recreates the tables and the built-in admin account
+    if args.reset and args.empty:
+        print("Done. The database is empty apart from the admin account.")
+        return
 
     with Session(engine) as session:
         parent = _get_or_create_parent(session)

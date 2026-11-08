@@ -17,7 +17,7 @@ from fastapi import HTTPException
 
 from app.controllers.ai_controller import call_claude
 from app.models.card import Card, CreditProfile, limit_for
-from app.models.pricing import money, pct, twelve_month_cost
+from app.models.pricing import is_newcomer, money, pct, twelve_month_cost
 
 # record(requested_bp) -> (offer now on the table in bp, True if that is the lowest possible)
 Record = Callable[[int], tuple[int, bool]]
@@ -125,6 +125,16 @@ def opening_message(card: Card, limit: int) -> str:
 
 # ---- Claude bot ------------------------------------------------------------------
 
+NEWCOMER_RULE = (
+    "This child is a NEW customer: their account is under 3 months old, so they have no record to point to yet. "
+    "That is fine. A new customer earns a welcome discount when they say they are new AND make a specific promise, "
+    "for example to pay the full statement on time every month, to keep their balance under a third of the limit, "
+    "or to set a payment reminder. A vague promise ('I'll be good') is not enough: ask what exactly they will do. "
+    "Reward a specific promise with make_offer, and a second, different specific promise with another step. "
+    "If they are new and have not said so, you may hint that new customers can ask for a welcome rate.\n"
+)
+
+
 def _system_prompt(
     profile: CreditProfile, card: Card, best_bp: int, turns_left: int, show_score: bool = True, limit: int | None = None
 ) -> str:
@@ -146,11 +156,11 @@ late fee {money(card.late_fee)}.
 About the child: {score_line}{profile.on_time_streak} months paid on time in a row, \
 using {utilisation}% of their limit, account open {profile.months_open} months, currently on a card at \
 {pct(profile.current_apr_bp)} APR.
-Offer on the table now: {pct(best_bp)} APR. Messages left after this one: {turns_left}.
+{NEWCOMER_RULE if is_newcomer(profile) else ""}Offer on the table now: {pct(best_bp)} APR. Messages left after this one: {turns_left}.
 
 How to negotiate:
 - Only lower the rate when the child gives a real reason: steady on-time payments, low use of their limit, a good score, \
-a fair comparison with another card, or a polite and specific ask. Say which of those helped.
+a fair comparison with another card, a new customer's specific promise (see above), or a polite and specific ask. Say which of those helped.
 - Do not move for pleading, threats, flattery, or the same ask repeated. Say what would help instead.
 - Move in small steps. Call make_offer to change the rate; it is the only way an offer exists. At most one call per message. \
 After the tool answers, use the recorded number it gives you, and if it says that is your best, say so.
@@ -267,6 +277,7 @@ REASONS: list[tuple[str, tuple[str, ...]]] = [
     ("compare", ("other card", "another card", "compare", "elsewhere", "competitor", "cheaper", "better offer")),
     ("score", ("score",)),
     ("limit", ("utilis", "utiliz", "balance", "limit", "use less")),
+    ("promise", ("promise", "i'm new", "i am new", "new customer", "first card", "i will pay", "i'll pay", "reminder")),
 ]
 
 # Each seller's offline lines. {apr} is filled in; {praise} is the line for the reason the child gave.
@@ -277,6 +288,7 @@ SCRIPTS: dict[str, dict] = {
             "compare": "Shopping around? Smart!",
             "score": "A solid score, nice work!",
             "limit": "Keeping your balance low is a great habit!",
+            "promise": "A new member with a real plan? I love that!",
         },
         "drop": "{praise} I can lower your APR to {apr}!",
         "best_tail": " That is the very best I can do, and I am rooting for you!",
@@ -292,6 +304,7 @@ SCRIPTS: dict[str, dict] = {
             "compare": "A fair comparison. Noted.",
             "score": "Your score supports that.",
             "limit": "Low use of your limit is a good sign.",
+            "promise": "No record yet, but a specific commitment. That is a reasonable start.",
         },
         "drop": "{praise} I can do {apr}.",
         "best_tail": " That is my best offer.",
@@ -307,6 +320,7 @@ SCRIPTS: dict[str, dict] = {
             "compare": "Comparing is sensible, though few cards compare to this one.",
             "score": "A strong score. That is the right start.",
             "limit": "You keep your balance low. Very Venture <W>.",
+            "promise": "New, but with a plan. We welcome members who plan ahead.",
         },
         "drop": "{praise} I can offer {apr}.",
         "best_tail": " That is the best I can do for any member.",
@@ -322,6 +336,7 @@ SCRIPTS: dict[str, dict] = {
             "compare": "You shop around. Other lenders are shopkeepers, my friend.",
             "score": "A good score. Flattering, but this is my business.",
             "limit": "A careful person. I like this.",
+            "promise": "A new friend who makes promises. Loyalty, I respect.",
         },
         "drop": "{praise} Out of friendship, I will do {apr}. Do not tell the others.",
         "best_tail": " That is a favour, and favours are rare.",

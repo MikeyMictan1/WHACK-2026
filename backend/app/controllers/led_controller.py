@@ -120,7 +120,7 @@ class LedDisplay:
         with self._lock:
             self.skin = skin if skin in SKINS else DEFAULT_SKIN
             self.owner_id = user.id if user else None
-            self.owner_name = (user.display_name or user.username) if user else None
+            self.owner_name = user.username if user else None
             self._state = {}
 
     def _run(self) -> None:

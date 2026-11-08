@@ -85,7 +85,7 @@ class ChildCreate(SQLModel):
     username: str = Field(regex=USERNAME_PATTERN)
     # Shorter minimum than parents so a kid can remember it (a PIN works).
     password: str = Field(min_length=4, max_length=128)
-    display_name: str = Field(min_length=1, max_length=40)
+    display_name: str | None = Field(default=None, max_length=40)  # optional: the app shows the username
     weekly_allowance: int = Field(ge=0)  # minor units
     app_experience: str = Field(min_length=1, max_length=20)
     card_type: str = Field(max_length=100)

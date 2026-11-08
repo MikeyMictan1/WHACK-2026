@@ -20,7 +20,7 @@ export const PRESET_SETTINGS: Record<
   { creditScore: boolean; cardTypes: readonly CardTypeValue[] }
 > = {
   '10+': { creditScore: false, cardTypes: ['deer_debit'] },
-  '13+': { creditScore: false, cardTypes: ['deer_debit', 'shark_father', 'calicco_credit'] },
+  '13+': { creditScore: false, cardTypes: ['deer_debit', 'shark_father', 'calicco_credit', 'cap_one'] },
   '15+': { creditScore: true, cardTypes: CARD_TYPE_OPTIONS.map((c) => c.value) },
 }
 
@@ -54,7 +54,6 @@ export type Child = User & { weekly_items: WeeklyItem[]; milestones: Milestone[]
 export type ChildInput = {
   username: string
   password: string
-  display_name: string
   weekly_allowance: number
   app_experience: string
   card_type: string
@@ -67,7 +66,7 @@ export type ChildInput = {
 export type ChildUpdate = Partial<
   Pick<
     ChildInput,
-    'display_name' | 'weekly_allowance' | 'app_experience' | 'card_type' | 'password' | 'weekly_items' | 'milestones'
+    'weekly_allowance' | 'app_experience' | 'card_type' | 'password' | 'weekly_items' | 'milestones'
   >
 >
 

@@ -83,11 +83,9 @@ export function ChildForm(props: Props) {
     e.preventDefault()
     const formEl = e.currentTarget
     const form = new FormData(formEl)
-    const display_name = String(form.get('display_name') ?? '').trim()
     const weekly_allowance = fromWc(String(form.get('weekly_allowance') ?? ''))
     const password = String(form.get('password') ?? '')
 
-    if (!display_name) return setError('Give your child a name')
     if (weekly_allowance === null) {
       return setError('Enter a valid weekly allowance')
     }
@@ -122,7 +120,6 @@ export function ChildForm(props: Props) {
         await props.onSubmit({
           username: String(form.get('username') ?? ''),
           password,
-          display_name,
           weekly_allowance,
           app_experience,
           card_type,
@@ -137,7 +134,6 @@ export function ChildForm(props: Props) {
         setMilestones([])
       } else {
         await props.onSubmit({
-          display_name,
           weekly_allowance,
           app_experience,
           card_type,
@@ -156,13 +152,6 @@ export function ChildForm(props: Props) {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
       <div className="grid gap-6 sm:grid-cols-2">
-        <TextField
-          label="Name"
-          name="display_name"
-          defaultValue={child?.display_name ?? ''}
-          maxLength={40}
-          required
-        />
         {props.mode === 'create' && (
           <TextField
             label="Username"

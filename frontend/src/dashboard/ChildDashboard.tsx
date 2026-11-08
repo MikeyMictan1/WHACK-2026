@@ -8,8 +8,7 @@ import { Skeleton } from '../components/ui/Skeleton.tsx'
 import { creditApi, formatDate, type CreditSummary } from '../credit/creditApi.ts'
 import { formatMoney } from '../lib/money.ts'
 import { PushToggle } from '../push/PushToggle.tsx'
-import { DecorPanel } from '../decor/DecorPanel.tsx'
-import { DecorTile } from '../decor/DecorTile.tsx'
+import { DecorPanel, DecorPiece } from '../decor/DecorPanel.tsx'
 import { decorApi, type DecorItem, type Spending } from '../decor/decorApi.ts'
 import { Bar } from '../monthly/ScoreSection.tsx'
 import { shopApi, type Wallet } from '../shop/shopApi.ts'
@@ -51,12 +50,12 @@ export function ChildDashboard({ child }: { child: User }) {
           </div>
           <div>
             {decor.some((i) => i.side) && (
-              <ul className="mb-8 grid grid-cols-4 gap-3 sm:grid-cols-6 lg:hidden">
+              <ul className="mb-8 flex items-end gap-4 overflow-x-auto lg:hidden">
                 {decor
                   .filter((i) => i.side)
                   .map((i) => (
-                    <li key={i.reward_id}>
-                      <DecorTile item={i} />
+                    <li key={i.reward_id} className="shrink-0">
+                      <DecorPiece item={i} className="h-24 w-auto" />
                     </li>
                   ))}
               </ul>

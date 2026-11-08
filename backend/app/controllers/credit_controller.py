@@ -231,7 +231,7 @@ def _statement_out(session: Session, s: Statement) -> StatementOut:
 
 
 def _display_name(user: User) -> str:
-    return user.display_name or user.username
+    return user.username
 
 
 def _reason(factor: str, delta: int, reason: str) -> ScoreReason:

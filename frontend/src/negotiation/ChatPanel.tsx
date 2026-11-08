@@ -29,8 +29,8 @@ export function ChatPanel({ session, sending, onSend }: Props) {
   }
 
   return (
-    <div className="flex flex-col border border-line bg-white">
-      <ol aria-live="polite" aria-label="Conversation" className="flex max-h-[28rem] min-h-[18rem] flex-col gap-5 overflow-y-auto p-5">
+    <div className="flex flex-col border border-line bg-white lg:min-h-0">
+      <ol aria-live="polite" aria-label="Conversation" className="flex max-h-[24rem] min-h-[12rem] flex-col gap-4 overflow-y-auto p-4 lg:max-h-none lg:min-h-0 lg:flex-1">
         {session.messages.map((m) => (
           <li key={m.id} className={m.role === 'child' ? 'self-end' : 'self-start'}>
             <p className="meta mb-1">{m.role === 'child' ? 'You' : session.seller}</p>
@@ -55,7 +55,7 @@ export function ChatPanel({ session, sending, onSend }: Props) {
         <div ref={endRef} />
       </ol>
 
-      <form onSubmit={submit} className="border-t border-line p-5">
+      <form onSubmit={submit} className="shrink-0 border-t border-line p-4">
         {outOfMessages ? (
           <p className="text-[15px]">That was your last message. Accept the offer or walk away.</p>
         ) : (
@@ -74,7 +74,7 @@ export function ChatPanel({ session, sending, onSend }: Props) {
                 }
               }}
               maxLength={MAX_LENGTH}
-              rows={3}
+              rows={2}
               disabled={sending}
               placeholder="Say why you deserve a better rate"
               className="mt-2 w-full resize-y border border-ink/20 bg-white px-4 py-3 text-[15px] text-ink outline-none placeholder:text-muted hover:border-ink/40 focus:border-ink disabled:opacity-60"

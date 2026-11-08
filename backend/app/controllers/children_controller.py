@@ -68,7 +68,7 @@ def add_child(data: ChildCreate, parent: CurrentParent, session: SessionDep) -> 
         hashed_password=hash_password(data.password),
         role="child",
         parent_id=parent.id,
-        display_name=data.display_name.strip(),
+        display_name=(data.display_name or "").strip() or None,
         weekly_allowance=data.weekly_allowance,
         app_experience=data.app_experience,
         card_type=data.card_type,

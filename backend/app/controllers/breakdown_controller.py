@@ -99,7 +99,7 @@ def child_breakdown(child_id: int, parent: CurrentParent, session: SessionDep) -
     assert summary.score is not None
     return BreakdownOut(
         child_id=child.id,
-        child_name=child.display_name or child.username,
+        child_name=child.username,
         username=child.username,
         score_tracking=score_enabled(child.app_experience),
         summary=summary,

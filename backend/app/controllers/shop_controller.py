@@ -69,7 +69,7 @@ def _require_child(user: User) -> User:
 
 
 def _name(user: User | None) -> str:
-    return (user.display_name or user.username) if user else "Unknown"
+    return user.username if user else "Unknown"
 
 
 def _public(session: Session, req: PurchaseRequest) -> PurchaseRequestPublic:

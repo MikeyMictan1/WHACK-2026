@@ -91,26 +91,28 @@ export function NegotiationPage() {
           ? 'Your plan has changed.'
           : 'Compare plans, then try for a better rate.'
 
+  // While chatting, on laptop screens and up the whole thing (seller, chat, offer) fits one screen under the nav:
+  // the seller and the chat share the height, and only the message list scrolls.
+  const fit = session !== null && status === 'active'
+
   return (
-    <>
+    <div className={fit ? 'flex flex-col lg:h-[calc(100svh-5rem-1px)] lg:min-h-[600px]' : ''}>
       {/* All white here: the seller art brings the blue. */}
-      <header className="container-x pt-10 md:pt-14">
-        <p className="flex items-center gap-3 text-sm font-medium text-muted">
-          <span aria-hidden className="block h-0.5 w-6 bg-signal" />
-          Negotiate
-        </p>
-        <h1 className="mt-2 text-[clamp(2.25rem,5vw,4rem)] leading-[0.95] font-light tracking-[-0.04em] text-brand">{title}</h1>
-        <p className="mt-3 max-w-xl text-lead text-muted">{description}</p>
+      <header className="container-x shrink-0 pt-6 md:pt-8">
+        <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+          <h1 className="text-[clamp(1.75rem,3.5vw,2.75rem)] leading-none font-light tracking-[-0.04em] text-brand">{title}</h1>
+          <p className="text-muted">{description}</p>
+        </div>
       </header>
 
-      <section className="container-x py-8 md:py-10">
+      <section className={`container-x pt-4 pb-6 ${fit ? 'flex min-h-0 flex-1 flex-col' : 'md:pb-10'}`}>
         {session && status !== 'confirmed' && (
-          <div className="mb-8">
+          <div className="mb-4 shrink-0">
             <SellerPortrait session={session} mood={moodOf(session)} />
           </div>
         )}
 
-        <div aria-live="polite" className="mb-6">
+        <div aria-live="polite" className={error ? 'mb-4 shrink-0' : ''}>
           <FormError message={error} />
         </div>
 
@@ -123,7 +125,7 @@ export function NegotiationPage() {
         {!session && error && <TextLink to="/plans">Back to plans</TextLink>}
 
         {session && status === 'active' && (
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-6">
             <ChatPanel session={session} sending={sending} onSend={send} />
             <OfferPanel session={session} busy={busy || sending} onAccept={accept} onWalkAway={walkAway} />
           </div>
@@ -162,6 +164,6 @@ export function NegotiationPage() {
           </div>
         )}
       </section>
-    </>
+    </div>
   )
 }

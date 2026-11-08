@@ -11,6 +11,7 @@ import time
 SIZE = 16
 PICO_VID = 0x2E8A  # Raspberry Pi
 BAUD = 115200
+KEEPALIVE_SECONDS = 2.0  # re-send an unchanged frame this often (also how fast a stopped board is noticed)
 
 Color = tuple[int, int, int]
 
@@ -27,6 +28,8 @@ class Unicorn:
         self.pixels: list[list[Color | None]] = [[None] * SIZE for _ in range(SIZE)]
         # True when the board runs the newer whack_grid.py that accepts whole frames ("F").
         self.fast = False
+        self._last_frame: list[Color] | None = None
+        self._last_sent_at = 0.0
 
     # ---- connection ----------------------------------------------------
     @staticmethod
@@ -49,7 +52,7 @@ class Unicorn:
         except serial.SerialException as e:
             raise UnicornError(f"Couldn't open {port}. Is another program (Thonny, mpremote) using it?") from e
 
-        ser.write(b"\r\x03\x03")  # stop whatever is running, back to the REPL
+        ser.write(b"\r\x03\x03\r\n")  # stop whatever is running, back to the REPL, and end any half-typed line
         time.sleep(0.3)
         ser.reset_input_buffer()
         ser.write(b"import whack_grid; whack_grid.run()\r")
@@ -101,6 +104,7 @@ class Unicorn:
             except Exception:
                 pass
         self._serial, self.port = None, None
+        self._last_frame = None  # the next frame always goes out in full after a reconnect
 
     # ---- public ----------------------------------------------------------
     def status(self) -> dict[str, object]:
@@ -111,14 +115,33 @@ class Unicorn:
         r, g, b = color or (0, 0, 0)
         self._command(f"P {x} {y} {r} {g} {b}")
 
+    def _check_alive(self) -> None:
+        """whack_grid prints nothing while it runs. If the board talks back, its script has stopped and the
+        MicroPython prompt is echoing our commands (a traceback, '>>>', 'Error'). Writes still succeed then,
+        so without this check the board froze until it was unplugged. Raises so the caller reconnects."""
+        assert self._serial is not None
+        waiting = self._serial.in_waiting
+        if not waiting:
+            return
+        data = self._serial.read(waiting)
+        if b">>>" in data or b"Traceback" in data or b"Error" in data:
+            raise OSError("whack_grid stopped running on the board")
+
     def show_frame(self, frame: list[Color]) -> None:
         """Show a whole 16x16 frame (row-major). Whole-frame command on new boards,
-        changed pixels only on boards with the old whack_grid.py."""
+        changed pixels only on boards with the old whack_grid.py.
+
+        An unchanged frame is only re-sent every KEEPALIVE_SECONDS, so still skins don't flood the board,
+        and a board whose script stopped is noticed and restarted within that time."""
         with self._lock:
+            now = time.monotonic()
+            if frame == self._last_frame and now - self._last_sent_at < KEEPALIVE_SECONDS and self._serial is not None:
+                return
             for attempt in range(2):
                 try:
                     if self._serial is None:
                         self._connect()
+                    self._check_alive()
                     if self.fast:
                         self._send("F " + "".join(f"{r:02x}{g:02x}{b:02x}" for r, g, b in frame))
                     for i, c in enumerate(frame):
@@ -127,6 +150,7 @@ class Unicorn:
                             if not self.fast:
                                 self._send(f"P {x} {y} {c[0]} {c[1]} {c[2]}")
                             self.pixels[y][x] = c
+                    self._last_frame, self._last_sent_at = list(frame), now
                     return
                 except UnicornError:
                     raise

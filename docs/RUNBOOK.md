@@ -63,7 +63,13 @@ The scripts are bash: run them from the repo root in **Git Bash** (not PowerShel
 ```bash
 npm run seed          # add the demo accounts if they're missing (safe to repeat)
 npm run seed:reset    # erase EVERY table, then add them again (works while the backend runs)
+scripts/wipe          # erase EVERY table and leave it empty (only admin). --demo re-adds the demo accounts, -y skips the prompt
 ```
+
+These only touch your local database (`backend/app.db`). The live site keeps its own database on the Railway
+volume; redeploying does not wipe it. After a wipe, log out in the browser (an old login cookie can point at a
+new account) and turn phone notifications off and on. NFC cards need nothing: card links are in the database, and
+an old "Log out with NFC" save on a card is erased the first time the card is tapped.
 
 | Account | Login | What it is |
 | --- | --- | --- |

@@ -36,7 +36,7 @@ export function SellerPortrait({ session, mood }: { session: NegotiationSession;
       <img
         src={face}
         alt={`${name}, ${MOOD_LABEL[mood]}`}
-        className="pixelated block aspect-[223/124] h-[clamp(180px,32vw,340px)] w-auto max-w-none"
+        className="pixelated block aspect-[223/124] h-[clamp(130px,min(32vw,26svh),300px)] w-auto max-w-none"
       />
       <figcaption className="absolute bottom-0 left-0 flex w-full flex-wrap items-baseline justify-between gap-x-4 px-4 pb-2 text-white md:px-6 md:pb-3">
         <span className="font-medium md:text-lg">{session.seller}</span>

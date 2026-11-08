@@ -22,9 +22,12 @@ import concurrent.futures
 import itertools
 import json
 import threading
+import time
 from typing import Any
 
 from app.core.nfc_card import NfcError
+
+FRAME_SEND_STALL_SECONDS = 5.0  # give up waiting on a frame that has not gone out after this long
 
 CALL_TIMEOUT = 15  # seconds for one card operation on the laptop
 Color = tuple[int, int, int]
@@ -38,6 +41,7 @@ class BridgeLink:
         self._ids = itertools.count(1)
         self._pending: dict[int, concurrent.futures.Future[dict]] = {}
         self._frame_send: concurrent.futures.Future[None] | None = None
+        self._frame_sent_at = 0.0
         self.board: dict[str, object] = {"connected": False, "port": None, "fast": False}
 
     @property
@@ -97,9 +101,15 @@ class BridgeLink:
 
     def send_frame(self, frame: list[Color]) -> None:
         """Show a frame on the laptop's LED board. Skipped while the previous one is still sending."""
-        if self._ws is None or (self._frame_send is not None and not self._frame_send.done()):
+        if self._ws is None:
             return
+        if self._frame_send is not None and not self._frame_send.done():
+            # A send stuck for this long would otherwise block every later frame until the bridge reconnects.
+            if time.monotonic() - self._frame_sent_at < FRAME_SEND_STALL_SECONDS:
+                return
+            self._frame_send.cancel()
         try:
+            self._frame_sent_at = time.monotonic()
             self._frame_send = self._send({"type": "frame", "hex": "".join(f"{r:02x}{g:02x}{b:02x}" for r, g, b in frame)})
         except NfcError:
             pass

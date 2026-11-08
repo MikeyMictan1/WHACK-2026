@@ -88,7 +88,7 @@ CARD_SEED: list[Card] = [
     ),
     Card(
         id="chip", name="ChipOne", tier=2, pitch="A step up. A higher limit and a little cash back.",
-        listed_apr_bp=1500, max_discount_bp=300, limit_multiplier_pct=150, min_score=600, rewards_bp=100,
+        listed_apr_bp=1500, max_discount_bp=300, limit_multiplier_pct=150, min_score=550, rewards_bp=100,
         late_fee=0, seller="Simon Smith from ChipOne",
     ),
     Card(

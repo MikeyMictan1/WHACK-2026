@@ -15,6 +15,8 @@ CONCESSION_STEPS = 2  # the bot can only reach the floor after at least this man
 PENALTY_STEP_BP = 100  # default: the most one rude message can add to the rate (1 percentage point)
 MAX_PENALTY_BP = 300  # default: the rate can never go more than this far above the listed APR
 RECOVERY_STEP_BP = 100  # being polite takes a penalty back off this much at a time, on every card
+NEWCOMER_MONTHS = 3  # an account younger than this has no record yet: it can earn a welcome discount instead
+NEWCOMER_SHARE = 0.6  # the welcome discount: this share of the card's maximum discount
 
 
 def pct(bp: int) -> str:
@@ -42,10 +44,20 @@ def quality(profile: CreditProfile, card: Card) -> float:
     return 0.5 * score_part + 0.3 * streak_part + 0.2 * util_part
 
 
+def is_newcomer(profile: CreditProfile) -> bool:
+    """A new account with no record to point to. The seller may give it a welcome discount for a promise."""
+    return profile.months_open < NEWCOMER_MONTHS
+
+
 def floor_apr_bp(profile: CreditProfile, card: Card) -> int:
-    """The lowest APR this child can ever get on this card. Never sent to the browser."""
-    discount = round(card.max_discount_bp * quality(profile, card))
-    return card.listed_apr_bp - discount
+    """The lowest APR this child can ever get on this card. Never sent to the browser.
+
+    A newcomer has no history to earn a discount with, so their floor is at least the welcome discount. The
+    seller is told to give it only for "I'm new" plus a specific promise (see seller_bot), in steps like any other."""
+    share = quality(profile, card)
+    if is_newcomer(profile):
+        share = max(share, NEWCOMER_SHARE)
+    return card.listed_apr_bp - round(card.max_discount_bp * share)
 
 
 def typical_range_bp(profile: CreditProfile, card: Card) -> tuple[int, int]:

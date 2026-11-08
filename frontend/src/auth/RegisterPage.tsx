@@ -31,7 +31,6 @@ export function RegisterPage() {
       await register({
         username: String(form.get('username')),
         password,
-        display_name: String(form.get('display_name') ?? '').trim() || undefined,
       })
       navigate(from, { replace: true })
     } catch (err) {
@@ -47,7 +46,6 @@ export function RegisterPage() {
       aside="Sign up as a parent. You create and manage your kids' accounts from your dashboard."
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
-        <TextField label="Your name" name="display_name" autoComplete="name" hint="Optional" maxLength={40} />
         <TextField
           label="Username"
           name="username"

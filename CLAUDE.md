@@ -14,6 +14,7 @@ The user is on Windows. Project scripts are bash and run from Git Bash at the re
 - `npm run dev` runs both in the foreground; `npm run setup` installs everything (first time)
 - `npm run seed` adds demo accounts (parent `demo_parent`, kids `demo_kid` and `demo_teen`; logins in
   `backend/app/seed.py`); `npm run seed:reset` erases all data first. Safe to repeat.
+  `scripts/wipe` erases everything and leaves only the admin (`--demo` re-adds the demo accounts). Local DB only.
 - Frontend http://localhost:5173 · backend http://127.0.0.1:8000 · API docs http://127.0.0.1:8000/docs
 - Vite proxies `/api/*` to the backend, so the frontend always calls relative `/api/...` paths
 - Preview configs for the browser pane are in `.claude/launch.json` (`frontend`, `backend`, `dev`)
@@ -222,6 +223,9 @@ Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plan
   utilisation, and `clamp_offer` limits every bot offer (down to the floor in steps; up per rude message by the card's `penalty_step_bp`, at most `max_penalty_bp` over the listed APR: 1 and 3 points,
   but The Shark Father punishes hard, 2.5 and 5 points; politeness takes a penalty back off 1 point a message). The bot (`core/seller_bot.py`) never sees the
   floor; it calls a `make_offer` tool and is told what was recorded. The UI shows the recorded offer.
+- New accounts (under 3 months, `pricing.is_newcomer`) have no record, so their floor includes a welcome discount
+  (60% of the card's maximum). The seller is told (`NEWCOMER_RULE`) to give it only for "I'm new" plus a specific promise,
+  in steps like any other reason. ChipOne needs a score of 550, so a new account (580) can pick it.
 - `models/card.py` seeds the five cards and holds `CreditProfile`, the child's credit account (their card,
   what they owe, their clock, their score and its three parts; created on first use through `get_profile`, which
   also sets up the score for older accounts).

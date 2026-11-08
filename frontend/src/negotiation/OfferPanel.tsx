@@ -16,10 +16,10 @@ export function OfferPanel({ session, busy, onAccept, onWalkAway }: Props) {
   const percentWon = Math.round(session.progress * 100)
 
   return (
-    <aside aria-label="Current offer" className="border border-line border-t-4 border-t-brand bg-white p-6 md:p-8">
+    <aside aria-label="Current offer" className="border border-line border-t-4 border-t-brand bg-white p-5 lg:min-h-0 lg:overflow-y-auto">
       <p className="meta">Current offer</p>
       <p
-        className={`mt-3 inline-block px-3 py-1 text-[clamp(3rem,7vw,4.75rem)] leading-none font-light tracking-[-0.04em] ${
+        className={`mt-3 inline-block px-3 py-1 text-[clamp(2.5rem,5vw,3.75rem)] leading-none font-light tracking-[-0.04em] ${
           improved ? 'bg-brand text-white' : worse ? 'bg-signal' : ''
         }`}
         aria-live="polite"
@@ -33,7 +33,7 @@ export function OfferPanel({ session, busy, onAccept, onWalkAway }: Props) {
         </p>
       )}
 
-      <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-line pt-5">
+      <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-line pt-4">
         <div>
           <dt className="meta">Listed rate</dt>
           <dd className={`mt-1 font-medium ${improved ? 'text-muted line-through' : ''}`}>{pct(session.listed_apr_bp)}</dd>
@@ -46,7 +46,7 @@ export function OfferPanel({ session, busy, onAccept, onWalkAway }: Props) {
         </div>
       </dl>
 
-      <div className="mt-6">
+      <div className="mt-4">
         <div className="flex items-baseline justify-between">
           <p className="meta">Discount won</p>
           <p className="meta">{percentWon}%</p>
@@ -63,7 +63,7 @@ export function OfferPanel({ session, busy, onAccept, onWalkAway }: Props) {
         </div>
       </div>
 
-      <div className="mt-8 flex flex-col gap-3">
+      <div className="mt-5 grid grid-cols-2 gap-3">
         <Button onClick={onAccept} disabled={busy}>
           Accept {pct(session.offer_apr_bp)}
         </Button>

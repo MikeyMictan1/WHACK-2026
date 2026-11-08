@@ -58,6 +58,6 @@ def redeem_milestone(milestone_id: int, child: CurrentChild, session: SessionDep
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
     session.commit()
     if child.parent_id is not None:
-        name = child.display_name or child.username
+        name = child.username
         notify(child.parent_id, f"{name} reached a milestone", f"{milestone.name}, {money(milestone.cost)} from their savings.")
     return get_milestones(child, session)

@@ -5,6 +5,7 @@ so they go through the normal purchase flow (parent approval + card tap). Free s
 owned by everyone. Parents can equip any skin (it's their device).
 """
 
+import threading
 from datetime import datetime
 
 from sqlmodel import Field, Session, SQLModel, col, select
@@ -28,9 +29,53 @@ class LedEquip(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=lambda: site_now())
 
 
+# The shop page asks for its items and the LED previews at the same moment, and both run this. Without the
+# lock, a new family got every skin (and example item) twice. One app process (see railway.json), so a
+# process lock is enough.
+_sync_lock = threading.Lock()
+
+
 def ensure_skin_rewards(session: Session, parent_id: int) -> None:
-    """Give a family's shop one item per paid skin, once. Removed ones stay removed. Also flags old preset rows."""
+    """Give a family's shop one item per paid skin, once. Removed ones stay removed. Also flags old preset rows
+    and tidies the example items (mark_presets). Hides duplicate copies of a skin made by the old race."""
+    with _sync_lock:
+        _ensure_skin_rewards(session, parent_id)
+
+
+def _hide_duplicate_skins(session: Session, parent_id: int) -> bool:
+    """Keep one active shop item per skin: the one a child bought if any, else the oldest. Caller commits."""
+    rows = session.exec(
+        select(Reward, RewardSkin.skin)
+        .join(RewardSkin, col(RewardSkin.reward_id) == col(Reward.id))
+        .where(Reward.parent_id == parent_id, col(Reward.active).is_(True))
+        .order_by(col(Reward.id))
+    ).all()
+    bought = set(
+        session.exec(
+            select(PurchaseRequest.reward_id).where(
+                col(PurchaseRequest.reward_id).in_([r.id for r, _ in rows]), PurchaseRequest.status == "paid"
+            )
+        ).all()
+    )
+    keep: dict[str, Reward] = {}
+    changed = False
+    for reward, skin in rows:
+        other = keep.get(skin)
+        if other is None:
+            keep[skin] = reward
+            continue
+        loser = other if (reward.id in bought and other.id not in bought) else reward
+        if loser is other:
+            keep[skin] = reward
+        loser.active = False
+        session.add(loser)
+        changed = True
+    return changed
+
+
+def _ensure_skin_rewards(session: Session, parent_id: int) -> None:
     flagged = mark_presets(session, parent_id)
+    flagged = _hide_duplicate_skins(session, parent_id) or flagged
     have = set(
         session.exec(
             select(RewardSkin.skin)

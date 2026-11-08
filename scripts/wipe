@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Wipe the LOCAL database (backend/app.db) and start from zero. Run from Git Bash. See RUNBOOK.md.
+#
+#   scripts/wipe          erase every table; only the built-in admin account is left
+#   scripts/wipe --demo   erase every table, then add the demo accounts (same as npm run seed:reset)
+#   add -y to skip the "are you sure"
+#
+# Works while the backend is running. It never touches the live site on Railway, which has its own
+# database. NFC cards need nothing: card links live in the database, and an old "Log out with NFC"
+# save on a card is erased automatically the first time that card is tapped.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+demo=false
+yes=false
+for arg in "$@"; do
+  case "$arg" in
+    --demo) demo=true ;;
+    -y|--yes) yes=true ;;
+    *) echo "unknown option: $arg (use --demo and/or -y)" >&2; exit 2 ;;
+  esac
+done
+
+if ! $yes; then
+  read -r -p "Erase ALL local accounts, money, cards and history? Type wipe to confirm: " answer
+  [ "$answer" = "wipe" ] || { echo "Cancelled. Nothing was changed."; exit 1; }
+fi
+
+if $demo; then
+  uv run --directory backend python -m app.seed --reset
+else
+  uv run --directory backend python -m app.seed --reset --empty
+fi
+
+echo
+echo "Now log out in the browser (or clear the site's cookies): an old login can point at a new account."
+echo "Phone notifications need turning off and on again."

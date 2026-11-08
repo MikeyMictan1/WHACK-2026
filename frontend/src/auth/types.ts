@@ -19,9 +19,10 @@ export type User = {
 
 export type LoginInput = { username: string; password: string }
 /** Sign-up always creates a parent account. */
-export type RegisterInput = LoginInput & { display_name?: string }
+export type RegisterInput = LoginInput
 
-/** The name to show for a user: their display name, else their username. */
-export function nameOf(user: Pick<User, 'display_name' | 'username'>) {
-  return user.display_name || user.username
+/** The name to show for a user. Accounts have a username only, so that is what we show
+ *  (older accounts may still carry a display_name; it is ignored). */
+export function nameOf(user: Pick<User, 'username'>) {
+  return user.username
 }

@@ -35,7 +35,7 @@ export function useNfc() {
 
       loginWithCard()
         .then((u) => {
-          showToast(`Welcome back, ${u.display_name ?? u.username}.`)
+          showToast(`Welcome back, ${u.username}.`)
           navigate('/dashboard')
         })
         .catch((err: Error) => showToast(err.message, 'error'))
