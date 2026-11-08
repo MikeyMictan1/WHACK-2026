@@ -19,14 +19,14 @@ export const PRESET_SETTINGS: Record<
   (typeof APP_EXPERIENCE_PRESETS)[number],
   { creditScore: boolean; cardTypes: readonly CardTypeValue[] }
 > = {
-  '10+': { creditScore: false, cardTypes: ['deer_debit'] },
-  '13+': { creditScore: false, cardTypes: ['deer_debit', 'shark_father', 'calicco_credit', 'cap_one'] },
+  '10+': { creditScore: true, cardTypes: ['deer_debit'] },
+  '13+': { creditScore: true, cardTypes: ['deer_debit', 'shark_father', 'calicco_credit', 'cap_one'] },
   '15+': { creditScore: true, cardTypes: CARD_TYPE_OPTIONS.map((c) => c.value) },
 }
 
 /** Whether credit score tracking is on: from the preset, or ticked under Custom. */
 export function creditScoreEnabled(appExperience: string | null) {
-  if (!appExperience) return false
+  if (!appExperience) return true // on by default
   if (appExperience in PRESET_SETTINGS) return PRESET_SETTINGS[appExperience as keyof typeof PRESET_SETTINGS].creditScore
   return appExperience.split(',').includes('credit_score')
 }

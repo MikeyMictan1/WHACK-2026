@@ -20,6 +20,7 @@ from app.controllers.deps import CurrentChild, CurrentParent
 from app.controllers.nfc_controller import (
     phone_tap_uid,
     require_own_card,
+    save_receipt,
     wait_for_card_tap,
 )
 from app.controllers.shop_controller import TAP_TIMEOUT_SECONDS
@@ -357,6 +358,7 @@ def pay(body: PayIn, child: CurrentChild, session: SessionDep) -> PayOut:
     """
     assert child.id is not None
     profile = get_profile(session, child.id)
+    reader_uid: str | None = None  # a reader tap also saves a receipt on the card
     if open_statement(session, child.id) is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "You have no statement to pay right now.")
 
@@ -381,6 +383,7 @@ def pay(body: PayIn, child: CurrentChild, session: SessionDep) -> PayOut:
                 if _waiting.get(child.id) is cancel_flag:
                     del _waiting[child.id]
         require_own_card(session, child.id, uid)
+        reader_uid = uid
 
     session.refresh(profile)  # we may have waited a while
     try:
@@ -388,6 +391,8 @@ def pay(body: PayIn, child: CurrentChild, session: SessionDep) -> PayOut:
     except CreditError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from e
     session.commit()
+    if reader_uid:
+        save_receipt(child.id, reader_uid, f"Statement {result.statement.number}", result.paid)
     return PayOut(summary=build_summary(session, child), paid=result.paid, cash_back=result.cash_back)
 
 
@@ -441,6 +446,16 @@ def skip_month(child_id: int, parent: CurrentParent, session: SessionDep) -> Ski
     child = get_child(session, parent.id, child_id)
     if child is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Child account not found")
+    return _skip(session, child)
+
+
+@router.post("/skip-month")
+def skip_my_month(child: CurrentChild, session: SessionDep) -> SkipOut:
+    """The child's own "Next month" button on the monthly review: same as the parent's skip."""
+    return _skip(session, child)
+
+
+def _skip(session: SessionDep, child: User) -> SkipOut:
     assert child.id is not None
     profile = get_profile(session, child.id)
     result = advance_month(session, child, profile)

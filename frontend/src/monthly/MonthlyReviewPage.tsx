@@ -15,6 +15,7 @@ import {
 import { pct } from '../lib/format.ts'
 import { formatMoney, parseMoney } from '../lib/money.ts'
 import { PhoneTapButton } from '../nfc/PhoneTapButton.tsx'
+import { skipMessage } from '../dashboard/skipMessage.ts'
 import { ScoreSection } from './ScoreSection.tsx'
 import { StorySection } from './StorySection.tsx'
 
@@ -32,6 +33,27 @@ export function MonthlyReviewPage() {
       .then(setSummary)
       .catch((err: Error) => setError(err.message))
   }, [])
+
+  const [skipping, setSkipping] = useState(false)
+
+  async function onNextMonth() {
+    const ok = window.confirm(
+      'Move on to next month? Your statement closes: anything you have not paid gets interest, and paying less ' +
+        'than the minimum adds a late fee. You get 4 weeks of allowance and a new statement. It cannot be undone.',
+    )
+    if (!ok) return
+    setSkipping(true)
+    try {
+      const result = await creditApi.skipMyMonth()
+      setSummary(await creditApi.get())
+      showToast(skipMessage(result, true))
+      window.scrollTo({ top: 0 })
+    } catch (err) {
+      showToast((err as Error).message, 'error')
+    } finally {
+      setSkipping(false)
+    }
+  }
 
   function onPaid(result: PayResult) {
     setSummary(result.summary)
@@ -84,6 +106,9 @@ export function MonthlyReviewPage() {
             <div className="mt-14 border-t border-ink pt-8">
               {summary.switch_locked_reason && <p className="mb-5 max-w-prose text-sm">{summary.switch_locked_reason}</p>}
               <div className="flex flex-wrap items-center gap-6">
+                <Button onClick={onNextMonth} disabled={skipping}>
+                  {skipping ? 'Moving on...' : 'Next month'}
+                </Button>
                 <ButtonLink to="/plans">Change plan?</ButtonLink>
                 <TextLink to="/learn#statements">How statements work</TextLink>
                 <TextLink to="/dashboard">Back to dashboard</TextLink>

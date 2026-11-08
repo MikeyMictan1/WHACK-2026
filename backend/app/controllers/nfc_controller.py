@@ -12,7 +12,8 @@ reach the frontend over Server-Sent Events at /api/nfc/events:
 
 A tap only does something when a screen is asking for one. Cards belong to child accounts:
 
-  pay            shop_controller.pay waits for a tap; the card must be the child's (first card links)
+  pay            shop_controller.pay waits for a tap; the card must be the child's (first card links).
+                 After a reader tap the card also gets a receipt saved on it (`save_receipt`)
   switch plan    negotiation_controller.confirm, same card check
   save data      POST /api/nfc/logout: the child's vault moves onto their card, then log out
                  (POST /api/nfc/logout/cancel is the "Back" button while waiting)
@@ -38,10 +39,12 @@ from pydantic import BaseModel, Field
 from app.controllers.auth_controller import _set_auth_cookie
 from app.controllers.deps import CurrentChild, CurrentUser, get_current_user_or_none
 from app.core.config import settings
-from app.core.database import SessionDep
+from app.core.database import SessionDep, engine
 from app.core.bridge_link import RemoteTag, bridge
 from app.core.nfc_card import NfcError, Tag, card_lock, close_tag, open_tag
 from app.core.nfc_hub import NfcHub
+from sqlmodel import Session
+
 from app.models import vault
 from app.models.shop import CardError, check_card, child_for_card, normalize_uid
 from app.models.user import User, UserPublic, get_user_by_id
@@ -199,6 +202,36 @@ def _on_card[T](action: Callable[[Tag | RemoteTag], T]) -> T:
         raise HTTPException(status.HTTP_409_CONFLICT, str(e)) from e
 
 
+def save_receipt(child_id: int, uid: str, item: str, amount: int) -> None:
+    """After a reader tap pays for something, save a copy of the account on the card: what was paid,
+    the balance and what is owed. Best effort in the background: the payment is already done, so a card
+    lifted too soon or a reader error only means no receipt. Phone taps can't write, so they skip this."""
+
+    def run() -> None:
+        from app.models.card import get_profile  # card imports shop, which this module also uses
+        from app.models.clock import site_now
+        from app.models.shop import balance_of
+
+        try:
+            with Session(engine) as session:
+                profile = get_profile(session, child_id)
+                data = {
+                    "item": item[:24],
+                    "paid": amount,
+                    "balance": balance_of(session, child_id),
+                    "owed": profile.balance,
+                    "on": site_now().date().isoformat(),
+                }
+                with _open_card() as tag:
+                    if normalize_uid(tag.uid.hex()) != normalize_uid(uid):
+                        return  # a different card is on the reader now
+                    vault.write_receipt(session, tag, child_id, data)
+        except Exception:  # noqa: BLE001 - never let a receipt break anything
+            pass
+
+    threading.Thread(target=run, name="nfc-receipt", daemon=True).start()
+
+
 @router.post("/logout")
 def logout_with_nfc(user: CurrentChild, session: SessionDep, response: Response) -> dict[str, object]:
     """Wait (up to 60 s) for the child to tap their card, move their data onto it, then log out.
@@ -238,7 +271,7 @@ def _user_for_tag(session: SessionDep, tag: Tag | RemoteTag) -> int:
         save = vault.read_card(tag)
     except NfcError:
         save = None  # unreadable memory (e.g. a locked MIFARE sector): the uid alone still works
-    if save is not None:
+    if save is not None and save.kind == "vault":
         if vault.is_live(session, save):
             return vault.move_from_card(session, tag)
         try:
@@ -306,6 +339,7 @@ def card_info(session: SessionDep) -> dict[str, object]:
                 "capacity": tag.capacity,
                 "max_data_bytes": tag.capacity - vault.OVERHEAD,
                 "holds_data": bool(save and vault.is_live(session, save)),
+                "receipt": save.data if save and save.kind == "receipt" else None,
             }
     except NfcError as e:
         return {"present": False, "message": str(e)}

@@ -117,13 +117,13 @@ def band_of(score: int) -> str:
 
 # ---- Whether a child sees it ------------------------------------------------------
 
-PRESET_SCORE = {"10+": False, "13+": False, "15+": True}  # mirrors PRESET_SETTINGS in the add-child form
+PRESET_SCORE = {"10+": True, "13+": True, "15+": True}  # mirrors PRESET_SETTINGS in the add-child form
 
 
 def score_enabled(app_experience: str | None) -> bool:
     """Is credit score tracking switched on for this child? From the age preset, or ticked under Custom."""
     if not app_experience:
-        return False
+        return True  # on by default
     if app_experience in PRESET_SCORE:
         return PRESET_SCORE[app_experience]
     return "credit_score" in app_experience.split(",")

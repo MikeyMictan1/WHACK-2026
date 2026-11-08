@@ -127,6 +127,8 @@ export const creditApi = {
     api<PayResult>('/credit/payments', { method: 'POST', json: { amount, simulate, card_uid: cardUid ?? null }, signal }),
   cancelPay: () => api<void>('/credit/payments/cancel', { method: 'POST' }),
   children: () => api<ChildCredit[]>('/credit/children'),
+  /** The child's own "Next month" on the monthly review. */
+  skipMyMonth: () => api<SkipResult>('/credit/skip-month', { method: 'POST' }),
   skipMonth: (childId: number) => api<SkipResult>(`/credit/children/${childId}/skip-month`, { method: 'POST' }),
 }
 

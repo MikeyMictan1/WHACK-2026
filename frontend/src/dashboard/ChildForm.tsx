@@ -52,7 +52,7 @@ export function ChildForm(props: Props) {
     new Set(
       initialExperienceChoice(child) === CUSTOM
         ? (child?.app_experience ?? '').split(',').filter((k) => CUSTOM_OPTIONS.some((o) => o.key === k))
-        : [],
+        : ['credit_score'], // credit score is on by default
     ),
   )
   const [selectedCardTypes, setSelectedCardTypes] = useState<Set<string>>(

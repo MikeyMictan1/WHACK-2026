@@ -2,8 +2,8 @@ import { STATUS_LABEL, formatDate, type SkipResult } from '../credit/creditApi.t
 import { formatMoney } from '../lib/money.ts'
 
 /** What skipping a month did, in a sentence or two. */
-export function skipMessage(r: SkipResult): string {
-  const parts = [`${r.child_name}: a month passed`]
+export function skipMessage(r: SkipResult, own = false): string {
+  const parts = [own ? 'A month passed' : `${r.child_name}: a month passed`]
   if (r.allowance > 0) parts.push(`${formatMoney(r.allowance)} allowance paid`)
   if (r.previous_number !== null && r.outcome) {
     const label = r.outcome === 'paid' ? STATUS_LABEL.paid : r.outcome === 'carried' ? STATUS_LABEL.carried : STATUS_LABEL.late

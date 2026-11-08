@@ -6,7 +6,6 @@ import { PageHeader } from '../components/layout/PageHeader.tsx'
 import { Button } from '../components/ui/Button.tsx'
 import { showToast } from '../components/ui/toast.ts'
 import { NfcLogoutScreen } from '../nfc/NfcLogoutScreen.tsx'
-import { VaultPanel } from '../vault/VaultPanel.tsx'
 
 export function ProfilePage() {
   const { user, logout } = useAuth()
@@ -56,7 +55,6 @@ export function ProfilePage() {
             </div>
           ))}
         </dl>
-        <VaultPanel />
 
         <div className="mt-10 flex flex-wrap gap-3">
           <Button onClick={onLogout} disabled={pending}>

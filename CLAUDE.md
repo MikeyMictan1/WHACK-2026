@@ -60,7 +60,7 @@ frontend/src/
   help/              the Ask button (bottom right, every page except the negotiation chat) and its chat panel
   milestones/        /milestones: the child's goals (from the child form) as boxes with progress; redeem from balance
   card/              /card: the child's card picture and terms; cardArt.ts maps card id -> assets/cards/*.png
-  front-page/  profile/  vault/  nfc/  legal/  not-found/
+  front-page/  profile/  nfc/  legal/  not-found/
   assets/            brand/ (logos), cards/ (one per card id), decor/ (in-game items), sellers/ (portraits),
                      mascot/. Sources are in teenacredit-assets/ at the repo root. The front-page
                      carousel shows the logo and the five cards (SLOTS in front-page/Carousel.tsx)
@@ -169,8 +169,9 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
 - `CreditProfile.balance` (what is owed) changes only through `credit.post_entry`, together with a
   `CreditEntry`. Never edit it directly. Functions in `models/credit.py` never commit; the caller does, so a
   purchase or payment and its ledger entries succeed or fail together.
-- Each child has their own clock (`CreditProfile.sim_now`). Only the parent's "Skip a month"
-  (`advance_month`, `POST /api/credit/children/{id}/skip-month`) moves it: 4 weeks, 4 allowances, the due date
+- Each child has their own clock (`CreditProfile.sim_now`). The parent's "Skip a month"
+  (`advance_month`, `POST /api/credit/children/{id}/skip-month`) or the child's "Next month" on `/review`
+  (`POST /api/credit/skip-month`) moves it: 4 weeks, 4 allowances, the due date
   passes, interest and any late fee, a new `Statement`. Statements are due 14 days after they are issued.
   This is separate from the admin's site clock (`models/clock.py`, `site_now()`), which the shop uses.
 - The seeded cards follow DESIGN.md 6.1 (`models/card.py`). Credit limits are not fixed amounts: each card has a
@@ -182,7 +183,7 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
   Whack Basic (`whack_basic`), and `list_cards` moves old data to the new id once.
 - The credit score (`models/score.py`) is 300 + payment history (250) + credit used (150) + history (100). It is
   recalculated only in `advance_month`, and every change is saved as a `ScoreEvent` with its reason. It is always
-  tracked, but only shown where the parent turned it on (`score_enabled`, mirroring the form's presets); the API
+  tracked, and shown unless the parent turned it off under Custom (`score_enabled`: on for every preset and by default); the API
   returns `score: null` otherwise, the AI helper and the sellers are told not to name a number, and locked-card
   messages use neutral wording. Change the maths and `score_rules_test`-style checks need new numbers.
 - A child can change plan once a month (`switch_locked_reason`); Plans and the negotiation both check it.
@@ -286,7 +287,9 @@ Cards belong to child accounts, and a tap only acts when a screen asks for one: 
 `require_own_card` (`models/shop.check_card`: the card must be the child's; their first card gets
 linked in `CardLink`). Card UIDs are stored via `normalize_uid` (upper hex, no separators).
 "Log out with NFC" moves the child's vault (`models/vault.py`) onto their card, AES-GCM encrypted
-with the card UID as associated data and a one-time save id. Tapping while logged out restores a
+with the card UID as associated data and a one-time save id. A reader tap that pays (purchase or statement)
+also writes a "receipt" copy to the card (`nfc_controller.save_receipt`, best effort, background): last payment,
+balance, owed. It never overwrites a waiting vault save and is never restored; tap login ignores it. Tapping while logged out restores a
 saved vault if the card has one, otherwise logs in the child the card is linked to. Changing
 `NFC_SECRET`/`JWT_SECRET` makes existing card saves unreadable.
 

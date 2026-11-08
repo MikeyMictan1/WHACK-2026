@@ -4,6 +4,9 @@
   * Log out with NFC    -> data is written to the card and erased from the database
                            (location "card"); the row remembers a one-time save id.
   * Tap card (logged out)-> data moves back into the database, the card is blanked.
+  * Pay by tapping       -> a copy ("receipt") of the account is written to the card: the last purchase,
+                           balance and what is owed. The database keeps everything (nothing moves), so a
+                           receipt is never restored; tapping it to log in just logs in the card's owner.
 
 The save id makes each card save usable exactly once: copying a card's bytes and
 replaying them later, or a card whose wipe failed, no longer matches and is ignored.
@@ -82,10 +85,13 @@ class CardSave:
     save_id: str
     data: dict[str, Any]
     saved_at: int
+    kind: str = "vault"  # vault: the data itself (Log out with NFC) | receipt: a copy written on payment
 
 
 def _pack(save: CardSave, uid: bytes) -> bytes:
     obj = {"u": save.user_id, "s": save.save_id, "d": save.data, "t": save.saved_at}
+    if save.kind != "vault":
+        obj["k"] = save.kind
     plain = zlib.compress(json.dumps(obj, separators=(",", ":")).encode(), 9)
     nonce = os.urandom(12)
     body = nonce + AESGCM(_key).encrypt(nonce, plain, uid)
@@ -102,11 +108,13 @@ def read_card(tag: Tag) -> CardSave | None:
         obj = json.loads(zlib.decompress(AESGCM(_key).decrypt(body[:12], body[12:], tag.uid)))
     except (InvalidTag, ValueError, zlib.error):
         return None
-    return CardSave(int(obj["u"]), str(obj["s"]), obj["d"], int(obj["t"]))
+    return CardSave(int(obj["u"]), str(obj["s"]), obj["d"], int(obj["t"]), str(obj.get("k", "vault")))
 
 
 def is_live(session: Session, save: CardSave) -> bool:
     """True if this card save is the one the database is waiting for (not stale or replayed)."""
+    if save.kind != "vault":
+        return False
     row = session.get(Vault, save.user_id)
     return row is not None and row.location == "card" and row.card_save_id == save.save_id
 
@@ -134,6 +142,23 @@ def move_to_card(session: Session, tag: Tag, user_id: int) -> int:
     row.updated_at = site_now()
     session.commit()
     return len(blob)
+
+
+def write_receipt(session: Session, tag: Tag, user_id: int, data: dict[str, Any]) -> bool:
+    """Write a copy of the account onto the card (after a tap payment). Never overwrites saved data
+    waiting on the card (Log out with NFC). Returns False if it skipped; raises NfcError on a bad write."""
+    try:
+        existing = read_card(tag)
+    except NfcError:
+        existing = None
+    if existing and is_live(session, existing):
+        return False
+    blob = _pack(CardSave(user_id, "", data, int(time.time()), "receipt"), tag.uid)
+    if len(blob) > tag.capacity:
+        data = {k: v for k, v in data.items() if k != "item"}  # small cards (NTAG213): drop the item name
+        blob = _pack(CardSave(user_id, "", data, int(time.time()), "receipt"), tag.uid)
+    tag.write(blob)
+    return True
 
 
 def move_from_card(session: Session, tag: Tag) -> int:

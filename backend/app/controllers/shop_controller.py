@@ -14,6 +14,7 @@ from app.controllers.deps import CurrentParent, CurrentUser
 from app.controllers.nfc_controller import (
     phone_tap_uid,
     require_own_card,
+    save_receipt,
     wait_for_card_tap,
 )
 from app.core.config import settings
@@ -364,6 +365,7 @@ def pay(
     if req.status != "approved":
         raise HTTPException(status.HTTP_409_CONFLICT, "This purchase isn't approved yet")
     profile = get_profile(session, child.id)  # before the tap: making a new profile commits
+    reader_uid: str | None = None  # set by a tap on the reader, which can also write a receipt to the card
 
     if simulate:
         if not settings.allow_simulated_tap:
@@ -386,6 +388,7 @@ def pay(
                 if _pending_taps.get(request_id) is cancel_flag:
                     del _pending_taps[request_id]
         require_own_card(session, child.id, uid)
+        reader_uid = uid
 
     session.refresh(req)  # the parent could have changed it while we waited
     if req.status != "approved":
@@ -420,6 +423,8 @@ def pay(
         add_entry(session, child_id=child.id, amount=-req.price, kind="purchase", description=req.title)
     session.commit()  # the status, the money and (on a first tap) the card link land together
     session.refresh(req)
+    if reader_uid:
+        save_receipt(child.id, reader_uid, req.title, req.price)
     return _public(session, req)
 
 
