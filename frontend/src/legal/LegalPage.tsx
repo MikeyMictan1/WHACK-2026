@@ -9,15 +9,15 @@ type Props = {
   sections: Section[]
 }
 
-/** Shared layout for Terms and Privacy. The copy is a template placeholder, not legal advice. */
+/** Shared layout for Terms and Privacy. Written in plain English for a student hackathon project; not reviewed by a lawyer. */
 export function LegalPage({ title, updated, sections }: Props) {
   return (
     <>
       <PageHeader marker="Legal" title={title} description={`Last updated ${updated}.`} />
       <section className="container-x py-12 md:py-16">
-        <p className="max-w-[68ch] bg-sky px-5 py-4 text-[15px]">
-          Template placeholder. Replace this page with terms written for your product and
-          reviewed by someone qualified before you launch.
+        <p className="max-w-[68ch] border-l-4 border-signal bg-sky px-5 py-4 text-[15px]">
+          Teenacredit is a student project built for the Whack 2026 hackathon. It uses play money only. Nothing on
+          this site is a real bank account, a real credit card or financial advice.
         </p>
         <div className="mt-12 max-w-[68ch]">
           {sections.map((s, i) => (

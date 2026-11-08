@@ -61,7 +61,8 @@ frontend/src/
   card/              /card: the child's card picture and terms; cardArt.ts maps card id -> assets/cards/*.png
   front-page/  profile/  vault/  nfc/  legal/  not-found/
   assets/            brand/ (logos), cards/ (one per card id), decor/ (in-game items), sellers/ (portraits),
-                     carousel/, mascot/. Sources are in teenacredit-assets/ at the repo root
+                     mascot/. Sources are in teenacredit-assets/ at the repo root. The front-page
+                     carousel shows the logo and the five cards (SLOTS in front-page/Carousel.tsx)
 hardware/unicorn/    whack_grid.py, MicroPython that runs on the LED board
 ```
 

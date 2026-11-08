@@ -1,29 +1,32 @@
 import { useEffect, useRef } from 'react'
 
+import chip from '../assets/cards/chip.png'
+import calicco from '../assets/cards/calicco_credit.png'
+import debit from '../assets/cards/debit.png'
+import shark from '../assets/cards/loan_shark.png'
+import venture from '../assets/cards/venture_w.png'
+import logo from '../assets/brand/logo-blue.png'
+
 /*
   3D ring carousel. Cards sit on the inside of a cylinder that you look into; the ring
   turns slowly on its own, and you can drag it (with momentum) left or right.
 
-  IMAGES: drop up to 6 files into  frontend/src/assets/carousel/  (jpg, png, webp, avif).
-  They are used in filename order (01.jpg, 02.jpg …) and repeat around the ring.
-  Each card is a solid white frame with the image in a window.
-  Any of the 6 slots without a file shows a plain grey placeholder with its expected name.
+  It shows the Teenacredit wordmark and the five cards a child can choose between, each in a
+  landscape white frame with its name underneath. Edit SLOTS to change what is on the ring.
 
   Sizing: the card count, card size and ring radius are recomputed on resize (see fit()), so
   the nearest side cards always fit the height and the visible arc spans the width.
 */
 
-/**
- * One caption per image, in filename order (1.png, 2.png …). Shown on the polaroid strip
- * under each picture and used as the image's alt text. Edit these freely.
- */
-const CAPTIONS = [
-  'Chip, our mascot',
-  'Caption for image 2',
-  'Caption for image 3',
-  'Caption for image 4',
-  'Caption for image 5',
-  'Caption for image 6',
+type Slot = { src: string; caption: string }
+
+const SLOTS: Slot[] = [
+  { src: logo, caption: 'Teenacredit' },
+  { src: calicco, caption: 'CaliccoCredit, the starter card' },
+  { src: debit, caption: 'DeerDebit, your own money' },
+  { src: chip, caption: 'ChipOne, a step up' },
+  { src: venture, caption: 'Venture <W>, the best rewards' },
+  { src: shark, caption: 'The Shark Father. Mind the interest' },
 ]
 
 const TUNING = {
@@ -40,8 +43,8 @@ const TUNING = {
   autoSpeed: 4,
   /** Degrees of rotation per pixel dragged. */
   dragFactor: 0.06,
-  /** Card width / height. 0.75 = portrait 3:4. Cards keep this shape at every size. */
-  aspect: 0.75,
+  /** Card width / height. Landscape, to fit the credit cards. Cards keep this shape at every size. */
+  aspect: 1.3,
   /**
    * Camera distance as a multiple of the ring radius. Lower = stronger fish-eye
    * (small centre card, big side cards). The original mock used 0.91.
@@ -50,7 +53,7 @@ const TUNING = {
   /** The tallest (nearest, side) card may use this share of the carousel's height. */
   heightShare: 0.94,
   /** The front card is never wider than this share of the carousel's width (phones). */
-  maxFrontWidth: 0.52,
+  maxFrontWidth: 0.42,
   /** Card height cap in px, so very tall screens don't get giant cards. */
   maxCardHeight: 760,
   /** Gap between cards: 0.9 = cards fill 90% of their slot on the ring. */
@@ -100,26 +103,6 @@ function fit(W: number, H: number): Geometry {
   const R = (cw * n) / (2 * Math.PI * TUNING.fill)
   return { n, cw, ch: cw / TUNING.aspect, R, z0: R * 0.96, P: R * TUNING.camera }
 }
-
-const files = import.meta.glob<string>('../assets/carousel/*.{jpg,jpeg,png,webp,avif,JPG,JPEG,PNG,WEBP}', {
-  eager: true,
-  query: '?url',
-  import: 'default',
-})
-
-type Slot = { src?: string; label: string; caption: string }
-
-const SLOTS: Slot[] = (() => {
-  const urls = Object.keys(files)
-    .sort()
-    .slice(0, TUNING.images)
-    .map((key) => files[key])
-  return Array.from({ length: TUNING.images }, (_, i) => ({
-    src: urls[i],
-    label: `carousel/${String(i + 1).padStart(2, '0')}.jpg`,
-    caption: CAPTIONS[i] ?? '',
-  }))
-})()
 
 type Motion = {
   rot: number
@@ -249,7 +232,7 @@ export function Carousel({ className = '' }: { className?: string }) {
       ref={stageRef}
       role="region"
       aria-roledescription="carousel"
-      aria-label="Product images. Drag to turn."
+      aria-label="The Teenacredit cards. Drag to turn."
       className={`relative w-full cursor-grab touch-pan-y overflow-hidden select-none ${className}`}
     >
       {Array.from({ length: TUNING.maxCards }, (_, i) => {
@@ -263,19 +246,13 @@ export function Carousel({ className = '' }: { className?: string }) {
             /* A polaroid: white frame, the picture in a window, a deeper strip below for the caption. */
             className="invisible absolute top-1/2 left-1/2 flex flex-col border border-ink/15 bg-white px-(--pad) pt-(--pad) [backface-visibility:hidden] will-change-transform"
           >
-            <div className="relative flex-1 overflow-hidden bg-[#eef1f5]">
-              {slot.src ? (
-                <img
-                  src={slot.src}
-                  alt={slot.caption}
-                  draggable={false}
-                  className="pointer-events-none absolute inset-0 size-full object-cover"
-                />
-              ) : (
-                <span className="absolute inset-0 flex items-center justify-center text-sm text-ink/40">
-                  {slot.label}
-                </span>
-              )}
+            <div className="relative flex-1 overflow-hidden bg-white">
+              <img
+                src={slot.src}
+                alt={slot.caption}
+                draggable={false}
+                className="pointer-events-none absolute inset-0 size-full object-contain p-[4%]"
+              />
             </div>
             <p className="flex h-[17%] shrink-0 items-center truncate px-0.5 text-(length:--cap) leading-tight text-ink/75">
               {slot.caption}
