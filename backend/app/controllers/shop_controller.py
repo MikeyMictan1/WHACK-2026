@@ -49,6 +49,7 @@ from app.models.shop import (
     expire_if_stale,
     expires_in,
     open_request_for,
+    price_for,
     set_status_if,
     utcnow,
     weekly_status,
@@ -124,7 +125,12 @@ def list_rewards(user: CurrentUser, session: SessionDep) -> list[RewardPublic]:
             assert user.id is not None
             left, again = weekly_status(session, user.id, r)
         owned = r.kind == "led_skin" and skin_for_reward(session, r.id) in skins_owned
-        out.append(RewardPublic(**r.model_dump(), left_this_week=left, available_again_at=again, owned=owned))
+        public = RewardPublic(**r.model_dump(), left_this_week=left, available_again_at=again, owned=owned)
+        if is_child:
+            public.price = price_for(r, user.weekly_allowance)  # presets scale with this child's allowance
+        out.append(public)
+    if is_child:
+        out.sort(key=lambda p: p.price)
     return out
 
 
@@ -248,12 +254,11 @@ def request_purchase(data: PurchaseRequestCreate, user: CurrentUser, session: Se
     if reward.kind == "led_skin" and skin_for_reward(session, reward.id) in owned_skins(session, child):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "You already own this skin")
     profile = get_profile(session, child.id)
-    if reason := purchase_block_reason(session, profile, reward.price, at_tap=False):
+    price = price_for(reward, child.weekly_allowance)  # fixed now: the request keeps this price
+    if reason := purchase_block_reason(session, profile, price, at_tap=False):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, reason)
 
-    req = PurchaseRequest(
-        child_id=child.id, reward_id=reward.id, title=reward.title, price=reward.price, kind=reward.kind
-    )
+    req = PurchaseRequest(child_id=child.id, reward_id=reward.id, title=reward.title, price=price, kind=reward.kind)
     session.add(req)
     session.commit()
     session.refresh(req)

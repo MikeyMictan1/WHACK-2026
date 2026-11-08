@@ -23,6 +23,9 @@ export type Reward = {
   kind: RewardKind
   /** Weekly items: how many times a child can buy it in any 7 days. */
   weekly_limit: number
+  /** The app's own item: `price` is for a 10.00 WC weekly allowance and each child pays (price / 10) x theirs.
+   *  Children get their own price already worked out; parents see the 10.00 WC one. */
+  preset: boolean
   /** Weekly items, child view: buys left this week. */
   left_this_week: number | null
   /** Weekly items: when the next one frees up, if none are left (null = can buy now). */

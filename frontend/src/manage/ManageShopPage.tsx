@@ -105,6 +105,9 @@ export function ManageShopPage() {
                         <div className="min-w-0">
                           <p className="font-medium">{r.title}</p>
                           {r.description && <p className="meta mt-1 truncate">{r.description}</p>}
+                          {r.preset && (
+                            <p className="meta mt-1">Price at 10 WC a week. Each child pays this ÷ 10 × their weekly allowance</p>
+                          )}
                         </div>
                         <div className="flex shrink-0 items-center gap-5">
                           <span className="tabular-nums">{formatMoney(r.price)}</span>

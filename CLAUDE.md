@@ -112,6 +112,11 @@ AI. The old paths redirect.
   `child_id` set, made by `weekly_item.sync_weekly_rewards` whenever that child's shop is read (matched by name).
   Only that child sees them; the parent's catalogue lists `child_id IS NULL` rows. A weekly reward can be bought
   `weekly_limit` times in any 7 days (`shop.weekly_status`); family weekly rewards have a limit of 1.
+- **Preset prices scale with the allowance:** example rewards and LED skins have `Reward.preset` set, and their
+  `price` is the price at 10.00 WC a week. A child pays `shop.price_for(reward, child.weekly_allowance)`:
+  (price / 10) x their weekly allowance (no allowance: the base price; free stays free). Use it wherever a child's
+  price matters (shop list, request, LED wardrobe and savings goal); the request then keeps that price. A parent's
+  own items and each child's weekly list keep their prices. `mark_presets` flags rows made before the flag.
 - **Backend hot reload can hang** (open SSE streams / the NFC thread). If an endpoint change doesn't
   show up, run `scripts/backend-restart`.
 - **Auth is a cookie**, not a header. `api()` sends `credentials: 'include'`; don't add

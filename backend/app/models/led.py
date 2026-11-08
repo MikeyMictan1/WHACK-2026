@@ -11,7 +11,7 @@ from sqlmodel import Field, Session, SQLModel, col, select
 
 from app.models.clock import site_now
 from app.core.led_skins import SKINS
-from app.models.shop import PurchaseRequest, Reward
+from app.models.shop import PurchaseRequest, Reward, mark_presets
 from app.models.user import User
 
 
@@ -29,7 +29,8 @@ class LedEquip(SQLModel, table=True):
 
 
 def ensure_skin_rewards(session: Session, parent_id: int) -> None:
-    """Give a family's shop one item per paid skin, once. Removed ones stay removed."""
+    """Give a family's shop one item per paid skin, once. Removed ones stay removed. Also flags old preset rows."""
+    flagged = mark_presets(session, parent_id)
     have = set(
         session.exec(
             select(RewardSkin.skin)
@@ -41,13 +42,15 @@ def ensure_skin_rewards(session: Session, parent_id: int) -> None:
     for skin in SKINS.values():
         if skin.price == 0 or skin.key in have:
             continue
-        reward = Reward(parent_id=parent_id, title=skin.name, description=skin.description, price=skin.price, kind="led_skin")
+        reward = Reward(
+            parent_id=parent_id, title=skin.name, description=skin.description, price=skin.price, kind="led_skin", preset=True
+        )
         session.add(reward)
         session.flush()
         assert reward.id is not None
         session.add(RewardSkin(reward_id=reward.id, skin=skin.key))
         added = True
-    if added:
+    if added or flagged:
         session.commit()
 
 

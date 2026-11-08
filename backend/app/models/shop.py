@@ -46,6 +46,9 @@ class Reward(SQLModel, table=True):
     # Only that child sees it; it is not in the parent's catalogue.
     child_id: int | None = Field(default=None, foreign_key="user.id", index=True)
     weekly_limit: int = 1  # weekly items: how many times a child can buy it in any 7 days
+    # One of the app's own items (an example reward or an LED skin). `price` is then the price at a 10.00 WC weekly
+    # allowance, and each child pays price_for(): (price / 10) x their weekly allowance.
+    preset: bool = False
 
 
 class Chore(SQLModel, table=True):
@@ -118,6 +121,7 @@ class RewardPublic(SQLModel):
     price: int
     kind: str
     weekly_limit: int = 1
+    preset: bool = False  # the price scales with each child's weekly allowance (parents see the 10.00 WC price)
     # Child view only: weekly items can be bought `weekly_limit` times in any 7 days.
     left_this_week: int | None = None
     available_again_at: datetime | None = None  # when the next one frees up, if none are left
@@ -244,6 +248,37 @@ def expires_in(req: PurchaseRequest) -> int | None:
     return max(0, int((_expires_at(req) - utcnow()).total_seconds()))
 
 
+BASE_WEEKLY_INCOME = 1_000  # 10.00 WC: preset prices are set for this weekly allowance
+
+
+def scaled_price(price: int, weekly_allowance: int | None) -> int:
+    """A preset price for a child with this weekly allowance: (price / 10 WC) x allowance. No allowance: the price."""
+    if not weekly_allowance or price <= 0:  # free stays free
+        return price
+    return max(1, round(price * weekly_allowance / BASE_WEEKLY_INCOME))
+
+
+def price_for(reward: Reward, weekly_allowance: int | None) -> int:
+    """What this child pays for this reward. Only preset items scale; a parent's own items keep their price."""
+    return scaled_price(reward.price, weekly_allowance) if reward.preset else reward.price
+
+
+def mark_presets(session: Session, parent_id: int) -> bool:
+    """Flag this family's example rewards and LED skins as presets (rows made before the flag existed).
+
+    Returns True if it changed anything. Caller commits."""
+    starters = {(t, d, k) for t, d, _, k in STARTER_REWARDS}
+    changed = False
+    for r in session.exec(
+        select(Reward).where(Reward.parent_id == parent_id, col(Reward.child_id).is_(None), col(Reward.preset).is_(False))
+    ):
+        if r.kind == "led_skin" or (r.title, r.description, r.kind) in starters:
+            r.preset = True
+            session.add(r)
+            changed = True
+    return changed
+
+
 def weekly_status(session: Session, child_id: int, reward: Reward) -> tuple[int, datetime | None]:
     """A weekly item for this child: (buys left in the last 7 days, when the next one frees up if none are)."""
     limit = max(1, reward.weekly_limit)
@@ -330,7 +365,7 @@ STARTER_CHORES: list[tuple[str, int, ChoreKind]] = [
 
 def add_starter_items(session: Session, parent_id: int) -> None:
     for title, description, price, kind in STARTER_REWARDS:
-        session.add(Reward(parent_id=parent_id, title=title, description=description, price=price, kind=kind))
+        session.add(Reward(parent_id=parent_id, title=title, description=description, price=price, kind=kind, preset=True))
     for title, amount, kind in STARTER_CHORES:
         session.add(Chore(parent_id=parent_id, title=title, amount=amount, kind=kind))
     session.commit()
