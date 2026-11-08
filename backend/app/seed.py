@@ -34,7 +34,7 @@ CHILDREN = [
         "display_name": "Kit",
         "weekly_allowance": 1000,  # minor units (1/100 WC): 10.00 WC
         "app_experience": "13+",
-        "card_type": "deer_debit,cap_one",
+        "card_type": "deer_debit,shark_father,calicco_credit",  # what the 13+ preset ticks
         "items": [("Ice cream", 300, 2), ("Extra screen time", 500, 1)],
         "milestones": [("New bike", 20000)],
         "start_money": 2000,  # 20.00 WC in their own balance
@@ -46,7 +46,7 @@ CHILDREN = [
         "display_name": "Alex",
         "weekly_allowance": 2500,
         "app_experience": "15+",
-        "card_type": "cap_one,venture_w,shark_father",
+        "card_type": "deer_debit,shark_father,cap_one,venture_w,calicco_credit",  # 15+: every card
         "items": [("Cinema ticket", 800, 1), ("Snacks", 250, 3)],
         "milestones": [("Concert ticket", 12000), ("Headphones", 8000)],
         "start_money": 5000,

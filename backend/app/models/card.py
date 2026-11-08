@@ -61,7 +61,8 @@ class CreditProfile(SQLModel, table=True):
     monthly_spend: int = 1_500  # a typical month's spending, used only for the rewards estimates
     on_time_streak: int = 0  # statements in a row that were not paid late
     months_open: int = 0
-    # Comma-separated card ids the parent allows. Empty means every card is allowed.
+    # Comma-separated card ids the parent allows. Empty means every card is allowed. A copy of the card types
+    # ticked on the child form (User.card_type), translated by allowed_from_card_type and kept in step by get_profile.
     allowed_card_ids: str = ""
 
     # The child's own clock. It only moves when a parent skips a month (models/credit.advance_month).
@@ -152,6 +153,28 @@ def _rename_starter_card(session: Session) -> None:
     session.commit()
 
 
+# The child form's card type values (frontend/src/dashboard/childrenApi.ts CARD_TYPE_OPTIONS) -> card ids.
+FORM_CARD_TYPES = {
+    "deer_debit": "debit",
+    "calicco_credit": STARTER_CARD_ID,
+    "cap_one": "chip",
+    "venture_w": "venture_w",
+    "shark_father": "loan_shark",
+}
+
+
+def allowed_from_card_type(card_type: str | None) -> str:
+    """The child form's ticked card types as allowed card ids (comma-separated). "" = no choice saved: all cards."""
+    picked = {FORM_CARD_TYPES[v.strip()] for v in (card_type or "").split(",") if v.strip() in FORM_CARD_TYPES}
+    return ",".join(c.id for c in CARD_SEED if c.id in picked)  # in tier order
+
+
+def _placement_card(session: Session, allowed: set[str]) -> Card | None:
+    """Where a child goes when their card is not allowed: the starter card if it is, else the lowest allowed card."""
+    cards = [c for c in list_cards(session) if c.id in allowed]
+    return next((c for c in cards if c.id == STARTER_CARD_ID), cards[0] if cards else None)
+
+
 MIN_CREDIT_LIMIT = 100  # 1.00 WC: a credit card always has some limit, even with no allowance set
 
 
@@ -210,14 +233,22 @@ def get_profile(session: Session, user_id: int) -> CreditProfile:
         session.add(profile)
         session.commit()
         session.refresh(profile)
-    # The limit follows the weekly allowance, so a parent changing the allowance changes it too.
+    # Follow the parent's settings on the child form: the cards they ticked and the weekly allowance (the limit).
     child = session.get(User, user_id)
-    weekly = (child.weekly_allowance or 0) if child else 0
+    before = (profile.allowed_card_ids, profile.current_card_id, profile.weekly_allowance, profile.credit_limit)
+    profile.allowed_card_ids = allowed_from_card_type(child.card_type if child else None)
+    allowed = allowed_ids(profile)
+    if allowed is not None and profile.current_card_id not in allowed and profile.balance <= 0:
+        # Their card was turned off and they owe nothing on it: move them (not their monthly plan change).
+        # If they owe money they keep it until they pay it off or switch.
+        if target := _placement_card(session, allowed):
+            profile.current_card_id = target.id
+            profile.current_apr_bp = target.listed_apr_bp
+    profile.weekly_allowance = (child.weekly_allowance or 0) if child else 0
     card = get_card(session, profile.current_card_id)
-    limit = limit_for(card, weekly) if card else profile.credit_limit
-    if (profile.weekly_allowance, profile.credit_limit) != (weekly, limit):
-        profile.weekly_allowance = weekly
-        profile.credit_limit = limit
+    if card is not None:
+        profile.credit_limit = limit_for(card, profile.weekly_allowance)
+    if (profile.allowed_card_ids, profile.current_card_id, profile.weekly_allowance, profile.credit_limit) != before:
         session.add(profile)
         session.commit()
         session.refresh(profile)

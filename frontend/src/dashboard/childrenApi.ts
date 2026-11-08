@@ -3,6 +3,7 @@ import type { User } from '../auth/types.ts'
 
 export const APP_EXPERIENCE_PRESETS = ['10+', '13+', '15+'] as const
 
+/** Which cards a child can use. Each value maps to a card id in FORM_CARD_TYPES (backend/app/models/card.py). */
 export const CARD_TYPE_OPTIONS = [
   { value: 'deer_debit', label: 'DeerDebit' },
   { value: 'shark_father', label: 'The Shark Father' },

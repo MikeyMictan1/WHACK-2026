@@ -162,6 +162,11 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
   returns `score: null` otherwise, the AI helper and the sellers are told not to name a number, and locked-card
   messages use neutral wording. Change the maths and `score_rules_test`-style checks need new numbers.
 - A child can change plan once a month (`switch_locked_reason`); Plans and the negotiation both check it.
+- The card types ticked on the child form (`User.card_type`, preset or Custom) decide which cards a child can use.
+  `get_profile` turns them into `CreditProfile.allowed_card_ids` via `FORM_CARD_TYPES` in `models/card.py` (form
+  value -> card id; keep it in step with `CARD_TYPE_OPTIONS` in `childrenApi.ts`). Nothing ticked = every card. If
+  the child's card is turned off and they owe nothing, they move to the starter card (or the lowest allowed one);
+  if they owe money they keep it, but can't spend on it until they pay it off or switch.
 
 ## Parent dashboard: kids list, breakdown
 
