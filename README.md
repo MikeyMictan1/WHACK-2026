@@ -1,4 +1,5 @@
 # Teenacredit - Giddy Up Glitch Whack 2026 Submission
+<img width="1872" height="897" alt="screen1" src="https://github.com/user-attachments/assets/d6bb0538-a4b4-4d6f-ad7c-cf92471e470c" />
 
 ## Inspiration
 "Make Credit Accessible" led us to trace our own experiences as university students with credits, only to realise we knew nothing about it. With that, we pursued the idea of making credit more accessible by educating the next generation from the ages of 10 to 18.
@@ -37,6 +38,8 @@
 - Any AI text that contains a number not in the facts is rejected and retried, then a built-in fallback is used. The demo keeps working if Claude is down.
 - AI summaries do not have access to a child's name, and the AI does not name a credit score the parent has hidden.
 
+<img width="1174" height="807" alt="screen2" src="https://github.com/user-attachments/assets/80a10dcf-7e61-4a16-acc2-5e223b22d9b9" />
+
 ## Challenges we ran into
 - Ensuring the tool was compatible with both kids and teens: we decided to integrate extra features for the teens to match the complexity with their learning ability
 - NFC Detection Consistency: our NFC cards seem to instantaneously react to Android phones but not IOS phones. This was due to their architectural differences; hence, this was a problem we couldn't solve in our prototype.
@@ -46,6 +49,8 @@
 - Complete credit loop (earn, spend, statement, pay, score, switch plan) with a real card tap and a score that always explains why it moved.
 - Negotiation feature with customised seller bot personalities.
 - Hardware integrations: the NFC card is the bank card, and the LED board is a live display of the child's account.
+
+<img width="1368" height="796" alt="screen3" src="https://github.com/user-attachments/assets/001ad826-35d0-4ff5-8201-9a99182bea2c" />
 
 ## What we learned
 - Importance of the planning stage to ensure the majority of details are covered in the system design before coding.
