@@ -169,7 +169,7 @@ def start_negotiation(card_id: str, child: CurrentChild, db: SessionDep, bg: Bac
 
     neg = neg_model.start_session(db, profile, card, floor_apr_bp(profile, card))
     if card.negotiable and not neg_model.messages_of(db, neg.id or 0):
-        neg_model.add_message(db, neg, "seller", seller_bot.opening_message(card), neg.best_offer_bp)
+        neg_model.add_message(db, neg, "seller", seller_bot.opening_message(card, profile), neg.best_offer_bp)
         bg.add_task(led_feedback.show_progress, _progress(neg))
     return _out(db, neg, profile)
 

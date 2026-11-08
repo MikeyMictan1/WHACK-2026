@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 from sqlmodel import Field, Session, SQLModel, select
 
 from app.models.clock import site_now
-from app.models.card import Card, CreditProfile, allowed_ids
+from app.models.card import Card, CreditProfile, allowed_ids, limit_for
 from app.models.pricing import blocked_reason, ceiling_apr_bp, clamp_offer
 
 MAX_TURNS = 8
@@ -179,7 +179,7 @@ def confirm_switch(db: Session, neg: NegotiationSession, profile: CreditProfile,
 
     profile.current_card_id = card.id
     profile.current_apr_bp = neg.best_offer_bp
-    profile.credit_limit = card.credit_limit
+    profile.credit_limit = limit_for(card, profile.weekly_allowance)
     profile.last_switch_cycle = profile.cycles_done  # one change per month: the next waits for a statement
     neg.status = "confirmed"
     neg.updated_at = _now()

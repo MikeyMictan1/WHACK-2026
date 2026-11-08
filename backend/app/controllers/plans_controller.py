@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from app.controllers.deps import CurrentChild
 from app.core.database import SessionDep
-from app.models.card import Card, CreditProfile, allowed_ids, get_profile, list_cards
+from app.models.card import Card, CreditProfile, allowed_ids, get_profile, limit_for, list_cards
 from app.models.score import score_enabled
 from app.models.pricing import (
     blocked_reason,
@@ -84,7 +84,7 @@ def _option(profile: CreditProfile, card: Card, allowed: set[str] | None, show_s
         listed_apr_bp=card.listed_apr_bp,
         typical_low_bp=low,
         typical_high_bp=high,
-        credit_limit=card.credit_limit,
+        credit_limit=limit_for(card, profile.weekly_allowance),  # this child's limit on that card
         rewards_bp=card.rewards_bp,
         late_fee=card.late_fee,
         min_score=card.min_score,

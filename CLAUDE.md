@@ -148,7 +148,11 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
   (`advance_month`, `POST /api/credit/children/{id}/skip-month`) moves it: 4 weeks, 4 allowances, the due date
   passes, interest and any late fee, a new `Statement`. Statements are due 14 days after they are issued.
   This is separate from the admin's site clock (`models/clock.py`, `site_now()`), which the shop uses.
-- The seeded cards follow DESIGN.md 6.1 (`models/card.py`).
+- The seeded cards follow DESIGN.md 6.1 (`models/card.py`). Credit limits are not fixed amounts: each card has a
+  `limit_multiplier_pct` of the child's weekly allowance (Basic 1x, Chip 1.5x, Venture W 3x, Loan Shark 10x, at
+  least 1.00 WC). `get_profile` copies the allowance onto `CreditProfile.weekly_allowance` and keeps
+  `credit_limit` in step; use `limit_for(card, profile.weekly_allowance)` for a card the child isn't on.
+  `Card.credit_limit` is an unused leftover column.
 - The credit score (`models/score.py`) is 300 + payment history (250) + credit used (150) + history (100). It is
   recalculated only in `advance_month`, and every change is saved as a `ScoreEvent` with its reason. It is always
   tracked, but only shown where the parent turned it on (`score_enabled`, mirroring the form's presets); the API

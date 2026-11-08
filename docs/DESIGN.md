@@ -131,13 +131,17 @@ ones in the app; they were first proposed so the
 credit core had something concrete to
 build against. All values are starting points; tune them after a playtest.
 
-| Card | Limit | APR | Score needed | Perk | Notes |
+| Card | Limit (x weekly allowance) | APR | Score needed | Perk | Notes |
 |---|---|---|---|---|---|
 | Debit | none (own balance) | none | none | none | Default for the youngest kids. Can't go below £0. |
-| Whack Basic | £20 | 20% | none | none | Starter credit card every child can get. |
-| CapOne Chip | £50 | 15% | 600+ | 1% back | Mid tier, unlocked by a decent score. |
-| Venture W | £150 | 10% | 720+ | 3% back | Best card. Rewards paid as play money. |
-| Loan Shark | £100 | 90% | none, instant | none | £5 late fee. Looks easy, costs the most. The villain. |
+| Whack Basic | 1x | 20% | none | none | Starter credit card every child can get. |
+| CapOne Chip | 1.5x | 15% | 600+ | 1% back | Mid tier, unlocked by a decent score. |
+| Venture W | 3x | 10% | 720+ | 3% back | Best card. Rewards paid as play money. |
+| Loan Shark | 10x | 90% | none, instant | none | £5 late fee. Looks easy, costs the most. The villain. |
+
+Limits scale with the child's weekly allowance (`Card.limit_multiplier_pct`, `card.limit_for`): a child on
+10.00 WC a week gets 10.00 WC on Whack Basic and 100.00 WC on Loan Shark. A credit card's limit is never below
+1.00 WC, and it updates when the parent changes the allowance.
 
 Rules:
 

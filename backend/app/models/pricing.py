@@ -6,7 +6,7 @@ clamped by `clamp_offer` before it is recorded.
 
 from dataclasses import dataclass
 
-from app.models.card import Card, CreditProfile
+from app.models.card import Card, CreditProfile, limit_for
 from app.models.credit import EXAMPLE_BALANCE, interest_for
 
 MAX_SCORE = 800
@@ -141,6 +141,7 @@ def blocked_reason(
         return f"You need a score of {card.min_score}. Yours is {profile.score}."
     if card.id == "debit" and profile.balance > 0:
         return "Pay off your balance first. Debit has no borrowing."
-    if card.credit_limit and profile.balance > card.credit_limit:
+    limit = limit_for(card, profile.weekly_allowance)
+    if limit and profile.balance > limit:
         return "Your balance is higher than this card's limit."
     return switch_locked_reason(profile)
