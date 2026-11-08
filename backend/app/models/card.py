@@ -10,6 +10,7 @@ from sqlalchemy import text
 from sqlmodel import Field, Session, SQLModel, select
 
 from app.models.score import init_score, utilisation_bp_of
+from app.models.shop import BASE_WEEKLY_INCOME
 from app.models.user import User
 
 STARTER_CARD_ID = "calicco_credit"
@@ -175,15 +176,17 @@ def _placement_card(session: Session, allowed: set[str]) -> Card | None:
     return next((c for c in cards if c.id == STARTER_CARD_ID), cards[0] if cards else None)
 
 
-MIN_CREDIT_LIMIT = 100  # 1.00 WC: a credit card always has some limit, even with no allowance set
+MIN_CREDIT_LIMIT = 100  # 1.00 WC: a credit card always has some limit, even on a tiny allowance
 
 
 def limit_for(card: Card, weekly_allowance: int) -> int:
     """This card's credit limit for a child with this weekly allowance: CaliccoCredit 1x, Cap One 1.5x,
-    Venture <W> 3x, The Shark Father 10x. 0 for DeerDebit."""
+    Venture <W> 3x, The Shark Father 10x. 0 for DeerDebit. No allowance set counts as 10.00 WC a week, like the shop's
+    preset prices (shop.scaled_price)."""
     if card.limit_multiplier_pct <= 0:
         return 0
-    return max(MIN_CREDIT_LIMIT, weekly_allowance * card.limit_multiplier_pct // 100)
+    weekly = weekly_allowance or BASE_WEEKLY_INCOME
+    return max(MIN_CREDIT_LIMIT, weekly * card.limit_multiplier_pct // 100)
 
 
 def card_limit_for(session: Session, card: Card, user_id: int) -> int:

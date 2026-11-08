@@ -144,8 +144,9 @@ build against. All values are starting points; tune them after a playtest.
 | The Shark Father | 10x | 90% | none, instant | none | £5 late fee. Looks easy, costs the most. The villain. |
 
 Limits scale with the child's weekly allowance (`Card.limit_multiplier_pct`, `card.limit_for`): a child on
-10.00 WC a week gets 10.00 WC on CaliccoCredit and 100.00 WC on The Shark Father. A credit card's limit is never below
-1.00 WC, and it updates when the parent changes the allowance.
+10.00 WC a week gets 10.00 WC on CaliccoCredit and 100.00 WC on The Shark Father. A child with no allowance set counts as
+10.00 WC a week (as for shop prices). A credit card's limit is never below 1.00 WC, and it updates when the parent
+changes the allowance.
 
 Rules:
 

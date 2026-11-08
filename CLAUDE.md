@@ -156,7 +156,7 @@ and its error mapping for new AI endpoints. For streaming, follow the SSE patter
   This is separate from the admin's site clock (`models/clock.py`, `site_now()`), which the shop uses.
 - The seeded cards follow DESIGN.md 6.1 (`models/card.py`). Credit limits are not fixed amounts: each card has a
   `limit_multiplier_pct` of the child's weekly allowance (CaliccoCredit 1x, Cap One 1.5x, Venture <W> 3x, The Shark Father 10x, at
-  least 1.00 WC). `get_profile` copies the allowance onto `CreditProfile.weekly_allowance` and keeps
+  least 1.00 WC; no allowance counts as 10.00 WC a week, as for shop prices). `get_profile` copies the allowance onto `CreditProfile.weekly_allowance` and keeps
   `credit_limit` in step. For a card the child isn't on, use `card_limit_for(session, card, user_id)` or
   `limit_for(card, profile.weekly_allowance)`, never `card.credit_limit` (an unused leftover column, like
   `User.starting_credit_limit`). The starter card is CaliccoCredit (`STARTER_CARD_ID = "calicco_credit"`); it was
