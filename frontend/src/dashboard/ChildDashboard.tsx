@@ -65,6 +65,9 @@ export function ChildDashboard({ child }: { child: User }) {
             <ButtonLink to="/decor" variant="light" className="border border-ink">
               Decor
             </ButtonLink>
+            <ButtonLink to="/milestones" variant="light" className="border border-ink">
+              Milestones
+            </ButtonLink>
           </div>
         </div>
 

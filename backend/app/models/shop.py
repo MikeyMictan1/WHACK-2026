@@ -19,7 +19,7 @@ from app.models.clock import site_now
 
 RewardKind = Literal["in_game", "weekly", "milestone", "led_skin"]
 ChoreKind = Literal["chore", "extracurricular"]
-EntryKind = Literal["chore", "purchase", "bonus", "allowance", "card_payment", "cash_back"]
+EntryKind = Literal["chore", "purchase", "bonus", "allowance", "card_payment", "cash_back", "milestone"]
 
 REQUEST_TTL = timedelta(minutes=15)  # pending/approved requests expire after this
 WEEKLY_COOLDOWN = timedelta(days=7)
