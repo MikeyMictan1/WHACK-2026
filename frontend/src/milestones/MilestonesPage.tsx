@@ -5,6 +5,7 @@ import { FormError } from '../components/ui/FormError.tsx'
 import { Skeleton } from '../components/ui/Skeleton.tsx'
 import { showToast } from '../components/ui/toast.ts'
 import { formatMoney } from '../lib/money.ts'
+import { celebrate } from './celebrate.ts'
 import { milestonesApi, type Milestone, type MilestonesState } from './milestonesApi.ts'
 
 /** Child: the goals their parent set, how close their savings are, and redeeming one from their own balance. */
@@ -26,6 +27,7 @@ export function MilestonesPage() {
     try {
       setState(await milestonesApi.redeem(m.id))
       setConfirming(null)
+      celebrate()
       showToast(`You reached ${m.name}. ${formatMoney(m.cost)} came out of your balance.`)
     } catch (err) {
       showToast((err as Error).message, 'error')

@@ -118,6 +118,7 @@ AI. The old paths redirect.
   (`POST /api/milestones/{id}/redeem`) needs no parent approval or tap: it takes the cost from the balance (never the
   credit card, whatever the limit) as a `milestone` ledger entry and sets `redeemed_at` (claimed with one UPDATE, so
   only once). `replace_milestones` matches by name so editing the form keeps redeemed ones. The parent gets a push.
+  A successful redeem plays `milestones/celebrate.ts` (`canvas-confetti`, site colours, off for reduced motion).
   These are separate from the shop's `milestone`-kind rewards (PS5 and so on).
 - **Preset prices scale with the allowance:** example rewards and LED skins have `Reward.preset` set, and their
   `price` is the price at 10.00 WC a week. A child pays `shop.price_for(reward, child.weekly_allowance)`:
