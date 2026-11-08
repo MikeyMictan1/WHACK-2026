@@ -234,7 +234,7 @@ Child flow: `/review` (always has "Change plan?") -> `/plans` (five cards, `plan
 - The negotiation page shows the seller at the top (`negotiation/SellerPortrait.tsx`, pixel art in
   `assets/sellers/`): Linguini has his own frames, every other seller uses the woman with the cat. The face
   follows the recorded offers (`mood.ts`): rate down = happy, up = angry, same = neutral.
-- Each seller has a character: `PERSONAS` (Mia, Simon Smith, Priya, Linguini the Godfather-style loan shark),
+- Each seller has a character: `PERSONAS` (Mia, Samantha Smith, Priya, Linguini the Godfather-style loan shark),
   `OPENERS` and the offline `SCRIPTS` in `core/seller_bot.py`, keyed by card id. A new negotiable card needs an
   entry in all three. Characters change wording only; the floor, the card's rude penalty and each card's maximum
   discount stay backend rules. Linguini never threatens or shames the child and never states a false number.

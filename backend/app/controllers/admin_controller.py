@@ -1,10 +1,11 @@
 """Admin-only views across every family."""
 
 from fastapi import APIRouter
-from sqlmodel import SQLModel, select
+from sqlmodel import SQLModel, delete, select
 
 from app.controllers.deps import CurrentAdmin
 from app.core.database import SessionDep
+from app.models.shop import CardLink
 from app.models.user import User, UserPublic
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -31,3 +32,20 @@ def all_parents(_: CurrentAdmin, session: SessionDep) -> list[FamilyOut]:
         )
         for p in parents
     ]
+
+
+class UnlinkResult(SQLModel):
+    unlinked: int
+
+
+@router.post("/cards/unlink-all", response_model=UnlinkResult)
+def unlink_all_cards(_: CurrentAdmin, session: SessionDep) -> UnlinkResult:
+    """Forget which NFC card belongs to which child, for every child.
+
+    Links are keyed by the card's built-in serial number, so wiping a card can't free it; this can.
+    Each child's next card tap links that card afresh. Nothing else is touched.
+    """
+    count = len(session.exec(select(CardLink)).all())
+    session.exec(delete(CardLink))  # type: ignore[call-overload]
+    session.commit()
+    return UnlinkResult(unlinked=count)

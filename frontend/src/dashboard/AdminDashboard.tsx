@@ -6,6 +6,7 @@ import { FormError } from '../components/ui/FormError.tsx'
 import { Skeleton } from '../components/ui/Skeleton.tsx'
 import { formatMoney } from '../lib/money.ts'
 import { adminApi, type Family } from './adminApi.ts'
+import { CardLinksPanel } from './CardLinksPanel.tsx'
 import { SiteClockPanel } from './SiteClockPanel.tsx'
 
 function joined(iso: string) {
@@ -36,6 +37,7 @@ export function AdminDashboard({ admin }: { admin: User }) {
 
       <section className="container-x py-10 md:py-14">
         <SiteClockPanel />
+        <CardLinksPanel />
 
         <div className="mt-14 flex flex-wrap items-end justify-between gap-4 border-b border-ink pb-4">
           <h2 className="text-d3 font-light tracking-[-0.02em]">Parents</h2>

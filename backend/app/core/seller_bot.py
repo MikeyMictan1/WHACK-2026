@@ -34,7 +34,7 @@ PERSONAS = {
         "wounded and gentle ('Ouch, let's keep it kind'), never angry."
     ),
     "chip": (
-        "SIMON SMITH, the dry banker. Precise and deadpan, no waffle: short level sentences and the odd dry joke. You "
+        "SAMANTHA SMITH, the dry banker. Precise and deadpan, no waffle: short level sentences and the odd dry joke. You "
         "respect numbers: share of the limit used, months on time, a fair comparison. Emotion and flattery leave you "
         "unmoved ('That is nice. What are the numbers?'). When the child makes a good point, say so plainly ('That is a "
         "reasonable point') and move a little. When they are vague, ask for the missing figure. If they are rude you note "
@@ -110,7 +110,7 @@ def age_band(age: int | None) -> str:
 
 
 def seller_name(card: Card) -> str:
-    """'Simon Smith from ChipOne' -> 'Simon Smith'."""
+    """'Samantha Smith from ChipOne' -> 'Samantha Smith'."""
     return card.seller.split(" from ")[0]
 
 

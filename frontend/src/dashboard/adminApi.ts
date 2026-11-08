@@ -23,4 +23,5 @@ export const adminApi = {
   clock: () => api<SiteClock>('/clock'),
   advanceClock: (unit: ClockUnit) => api<SiteClock>('/clock/advance', { method: 'POST', json: { unit } }),
   resetClock: () => api<SiteClock>('/clock/reset', { method: 'POST' }),
+  unlinkAllCards: () => api<{ unlinked: number }>('/admin/cards/unlink-all', { method: 'POST' }),
 }
